@@ -1,22 +1,10 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { ethers } from 'ethers';
 import QRCode from 'react-qr-code';
 import { usePrivy } from '@privy-io/react-auth';
 import { Wallet, Copy, RefreshCw, Zap, Save } from 'lucide-react';
-import { agentService } from '../../lib/supabase';
-
-const NETWORKS = {
-  BASE: { name: 'Base', symbol: 'ETH', chainId: 8453 },
-  ETHEREUM: { name: 'Ethereum', symbol: 'ETH', chainId: 1 },
-  BNB: { name: 'BNB Smart Chain', symbol: 'BNB', chainId: 56 },
-  AVAX: { name: 'Avalanche', symbol: 'AVAX', chainId: 43114 },
-  ARB: { name: 'Arbitrum', symbol: 'ETH', chainId: 42161 },
-  POL: { name: 'Polygon', symbol: 'POL', chainId: 137 },
-  OPTIMISM: { name: 'Optimism', symbol: 'ETH', chainId: 10 },
-  FLOW_EVM: { name: 'Flow EVM', symbol: 'FLOW', chainId: 747 }
-};
-
-const COINS = ['ETH', 'USDC', 'USDT', 'DAI', 'BTC', 'WETH', 'POL', 'AVAX', 'ARB', 'FLOW'];
+import { backendApiService } from '../../lib/backendApi';
+import { NETWORKS, getTokensForChain, POPULAR_NETWORKS } from '../../constants/chains';
 
 interface WalletInfo {
   address: string;
@@ -34,16 +22,153 @@ export const CreateAgent: React.FC = () => {
   const [agentConfig, setAgentConfig] = useState({
     name: '',
     description: '',
-    network: 'FLOW_EVM',
+    network: 'ARBITRUM',
     strategy: 'DCA',
     customStrategy: '',
     customPrompt: '',
     originSymbol: 'USDC',
-    destinationSymbol: 'FLOW',
+    destinationSymbol: 'ETH',
     amount: '',
     interval: '60', // minutes
+    slippageTolerance: '10', // percentage as string
     isTest: true
   });
+
+  // Get available tokens for the selected network
+  const availableTokens = useMemo(() => {
+    const selectedNetwork = NETWORKS[agentConfig.network as keyof typeof NETWORKS];
+    if (!selectedNetwork) return [];
+    return getTokensForChain(selectedNetwork.chainId);
+  }, [agentConfig.network]);
+
+  // Example templates for quick setup
+  const exampleTemplates = [
+    {
+      id: 'simple-arbitrum',
+      name: '🚀 Simple Same-Chain Bot',
+      description: 'Arbitrum USDC → ETH swap',
+      icon: '⚡',
+      config: {
+        name: 'Simple USDC-ETH Bot',
+        description: 'Simple bot that swaps USDC for ETH on Arbitrum',
+        network: 'ARBITRUM',
+        customPrompt: 'Simple bot that swaps 2 USDC for ETH on Arbitrum every time the price is favorable',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '2',
+        strategy: 'DCA',
+        interval: '60',
+        slippageTolerance: '10',
+        isTest: true
+      }
+    },
+    {
+      id: 'cross-chain',
+      name: '🌉 Cross-Chain Bot',
+      description: 'Arbitrum → Base bridge trading',
+      icon: '🔗',
+      config: {
+        name: 'Cross-Chain ARB-BASE Bot',
+        description: 'Cross-chain bot that optimizes trades between Arbitrum and Base',
+        network: 'ARBITRUM',
+        customPrompt: 'Cross-chain bot that swaps USDC from Arbitrum to ETH on Base when arbitrage opportunities arise. Monitor both chains for best prices.',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '5',
+        strategy: 'ARBITRAGE',
+        interval: '30',
+        slippageTolerance: '15',
+        isTest: true
+      }
+    },
+    {
+      id: 'dca-flow',
+      name: '💎 Flow DCA Bot',
+      description: 'Dollar-cost average into FLOW',
+      icon: '🌊',
+      config: {
+        name: 'Flow DCA Bot',
+        description: 'DCA bot for accumulating FLOW tokens',
+        network: 'FLOW_EVM',
+        customPrompt: 'DCA bot that buys FLOW tokens with USDC every hour, investing 10 USDC per trade regardless of price to build a long-term position',
+        originSymbol: 'USDC',
+        destinationSymbol: 'FLOW',
+        amount: '10',
+        strategy: 'DCA',
+        interval: '60',
+        slippageTolerance: '12',
+        isTest: true
+      }
+    },
+    {
+      id: 'momentum-base',
+      name: '📈 Momentum Trading Bot',
+      description: 'Base network momentum strategy',
+      icon: '🚀',
+      config: {
+        name: 'Base Momentum Bot',
+        description: 'Advanced momentum trading on Base network',
+        network: 'BASE',
+        customPrompt: 'Advanced momentum trading bot that buys ETH when price increases 3% in 15 minutes and sells when it drops 2% or gains 5%. Use 50 USDC per trade with tight risk management.',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '50',
+        strategy: 'MOMENTUM',
+        interval: '15',
+        slippageTolerance: '8',
+        isTest: true
+      }
+    },
+    {
+      id: 'range-polygon',
+      name: '📊 Range Trading Bot',
+      description: 'Polygon range trading strategy',
+      icon: '📐',
+      config: {
+        name: 'Polygon Range Bot',
+        description: 'Range trading bot for sideways markets',
+        network: 'POLYGON',
+        customPrompt: 'Range trading bot that buys POL when price drops to support level around $0.40 and sells at resistance around $0.50. Use 100 USDC per trade.',
+        originSymbol: 'USDC',
+        destinationSymbol: 'POL',
+        amount: '100',
+        strategy: 'RANGE',
+        interval: '120',
+        slippageTolerance: '10',
+        isTest: true
+      }
+    },
+    {
+      id: 'custom-advanced',
+      name: '🧠 Custom AI Strategy',
+      description: 'Let AI decide everything',
+      icon: '🤖',
+      config: {
+        name: 'AI-Powered Custom Bot',
+        description: 'Fully AI-driven trading strategy',
+        network: 'ARBITRUM',
+        customPrompt: 'You are an advanced AI trading bot. Analyze market conditions, choose the best tokens, amounts, and timing for profitable trades. Be conservative but opportunistic. Start with small amounts and scale up successful strategies.',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '25',
+        strategy: 'CUSTOM',
+        customStrategy: 'AI-driven adaptive strategy based on market analysis',
+        interval: '45',
+        slippageTolerance: '12',
+        isTest: true
+      }
+    }
+  ];
+
+  // Function to apply a template
+  const applyTemplate = useCallback((template: typeof exampleTemplates[0]) => {
+    setAgentConfig({
+      ...agentConfig,
+      ...template.config
+    });
+    setSuccess(`✨ Applied template: ${template.name}`);
+    setTimeout(() => setSuccess(''), 3000);
+  }, [agentConfig]);
 
   // Generate new EVM wallet
   const generateWallet = useCallback(() => {
@@ -123,48 +248,51 @@ export const CreateAgent: React.FC = () => {
       return;
     }
 
+    if (!agentConfig.amount) {
+      setError('Please provide an amount for trading');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      const agentData = {
-        user_wallet: userWallet,
-        agent_name: agentConfig.name,
-        public_key: wallet.address,
-        private_key: wallet.privateKey, // In production, encrypt this!
-        agent_configuration: JSON.stringify({
-          description: agentConfig.description,
-          customPrompt: agentConfig.customPrompt,
-          network: agentConfig.network,
-          strategy: agentConfig.strategy === 'CUSTOM' ? agentConfig.customStrategy : agentConfig.strategy,
+      const selectedNetwork = NETWORKS[agentConfig.network as keyof typeof NETWORKS];
+      
+      const botData = {
+        name: agentConfig.name,
+        prompt: agentConfig.customPrompt,
+        userWallet: userWallet,
+        swapConfig: {
+          senderAddress: wallet.address,
+          senderPrivateKey: wallet.privateKey,
+          recipientAddress: wallet.address, // Same as sender for most cases
           originSymbol: agentConfig.originSymbol,
           destinationSymbol: agentConfig.destinationSymbol,
           amount: agentConfig.amount,
-          interval: agentConfig.interval,
-          isTest: agentConfig.isTest,
-          walletAddress: wallet.address,
-          mnemonic: wallet.mnemonic, // In production, encrypt this!
-          aiInstructions: `This agent should execute trades based on the following custom prompt: "${agentConfig.customPrompt}". The AI should intelligently determine the best trading strategy, token pairs, amounts, and timing based on this natural language instruction.`
-        }),
-        agent_deployed_link: null // Will be set when actually deployed to a service
+          originBlockchain: selectedNetwork.apiName,
+          destinationBlockchain: selectedNetwork.apiName, // Same network for now
+          slippageTolerance: agentConfig.slippageTolerance,
+        }
       };
 
-      await agentService.createAgent(agentData);
-      setSuccess(`Agent "${agentConfig.name}" created successfully!`);
+      await backendApiService.createBot(botData);
+      setSuccess(`Agent "${agentConfig.name}" created and deployed successfully!`);
       
       // Reset form
       setWallet(null);
       setAgentConfig({
         name: '',
         description: '',
-        network: 'FLOW_EVM',
+        network: 'ARBITRUM',
         strategy: 'DCA',
         customStrategy: '',
         customPrompt: '',
         originSymbol: 'USDC',
-        destinationSymbol: 'FLOW',
+        destinationSymbol: 'ETH',
         amount: '',
         interval: '60',
+        slippageTolerance: '10',
         isTest: true
       });
     } catch (err) {
@@ -312,22 +440,36 @@ export const CreateAgent: React.FC = () => {
 
             <div>
               <h4 className="mb-4">🌐 Supported Networks</h4>
-              <div className="grid gap-2">
-                {Object.entries(NETWORKS).map(([key, network]) => (
-                  <div key={key} className="flex items-center gap-3">
-                    <div 
-                      style={{ 
-                        width: '8px', 
-                        height: '8px', 
-                        borderRadius: '50%',
-                        backgroundColor: 'var(--metallic-gold)'
-                      }}
-                    />
-                    <span style={{ fontSize: '14px' }}>
-                      {network.name} ({network.symbol})
-                    </span>
+              <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                <div className="grid gap-2">
+                  {POPULAR_NETWORKS.map((networkKey) => {
+                    const network = NETWORKS[networkKey];
+                    return (
+                      <div key={networkKey} className="flex items-center gap-3">
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            borderRadius: '50%',
+                            backgroundColor: 'var(--metallic-gold)'
+                          }}
+                        />
+                        <span style={{ fontSize: '14px' }}>
+                          {network.name} ({network.symbol})
+                        </span>
+                      </div>
+                    );
+                  })}
+                  <div style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--text-secondary)', 
+                    marginTop: '8px',
+                    paddingTop: '8px',
+                    borderTop: '1px solid var(--glass-border-dark)'
+                  }}>
+                    + {Object.keys(NETWORKS).length - POPULAR_NETWORKS.length} more networks available
                   </div>
-                ))}
+                </div>
               </div>
             </div>
           </div>
@@ -338,10 +480,84 @@ export const CreateAgent: React.FC = () => {
     </div>
   );
 
+  const renderTemplatesStep = () => (
+    <div className="step-container">
+      <div className="text-center mb-8">
+        <h2 className="metallic-text mb-4">✨ Step 2: Quick Start Templates</h2>
+        <p className="text-secondary">
+          Choose from pre-configured examples or start from scratch.
+        </p>
+      </div>
+
+      <div className="grid grid-2 gap-4 mb-6">
+        {exampleTemplates.map((template) => (
+          <div 
+            key={template.id} 
+            className="card" 
+            style={{ 
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
+              border: '1px solid var(--glass-border-dark)'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--metallic-gold)';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(212, 175, 55, 0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--glass-border-dark)';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div className="flex items-start gap-4">
+              <div 
+                className="metallic-gradient rounded-lg" 
+                style={{ padding: '12px', fontSize: '20px', minWidth: '48px', textAlign: 'center' }}
+              >
+                {template.icon}
+              </div>
+              <div className="flex-1">
+                <h3 className="mb-2" style={{ fontSize: '16px' }}>{template.name}</h3>
+                <p className="text-secondary mb-3" style={{ fontSize: '13px' }}>
+                  {template.description}
+                </p>
+                <div className="mb-3" style={{ fontSize: '11px', color: 'var(--metallic-gold)' }}>
+                  <div>🌐 {NETWORKS[template.config.network as keyof typeof NETWORKS]?.name}</div>
+                  <div>💱 {template.config.originSymbol} → {template.config.destinationSymbol}</div>
+                  <div>💰 {template.config.amount} {template.config.originSymbol}</div>
+                </div>
+                <button 
+                  className="btn btn-secondary"
+                  style={{ width: '100%', padding: '8px 16px', fontSize: '13px' }}
+                  onClick={() => applyTemplate(template)}
+                >
+                  <Zap size={14} />
+                  Use Template
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="text-center">
+        <div className="glass-dark rounded-lg p-4" style={{ display: 'inline-block' }}>
+          <p className="text-secondary" style={{ fontSize: '14px', marginBottom: '8px' }}>
+            💡 <strong>Templates are pre-configured for testing</strong>
+          </p>
+          <p className="text-secondary" style={{ fontSize: '12px' }}>
+            All templates start in test mode. You can modify any settings after applying a template.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderConfigureStep = () => (
     <div className="step-container">
       <div className="text-center mb-8">
-        <h2 className="metallic-text mb-4">⚙️ Step 2: Configure Your Agent</h2>
+        <h2 className="metallic-text mb-4">⚙️ Step 3: Configure Your Agent</h2>
         <p className="text-secondary">
           Set up your trading agent's parameters and strategy.
         </p>
@@ -377,7 +593,17 @@ export const CreateAgent: React.FC = () => {
               </label>
               <select
                 value={agentConfig.network}
-                onChange={(e) => setAgentConfig({...agentConfig, network: e.target.value})}
+                onChange={(e) => {
+                  const newNetwork = e.target.value;
+                  const newTokens = getTokensForChain(NETWORKS[newNetwork as keyof typeof NETWORKS].chainId);
+                  setAgentConfig({
+                    ...agentConfig, 
+                    network: newNetwork,
+                    // Reset token selection if current tokens aren't available on new network
+                    originSymbol: newTokens.includes(agentConfig.originSymbol) ? agentConfig.originSymbol : newTokens[0] || 'ETH',
+                    destinationSymbol: newTokens.includes(agentConfig.destinationSymbol) ? agentConfig.destinationSymbol : newTokens[1] || 'USDC'
+                  });
+                }}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -388,11 +614,25 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                {Object.entries(NETWORKS).map(([key, network]) => (
-                  <option key={key} value={key} style={{ background: 'var(--bg-primary)' }}>
-                    {network.name}
-                  </option>
-                ))}
+                <optgroup label="🔥 Popular Networks" style={{ background: 'var(--bg-primary)' }}>
+                  {POPULAR_NETWORKS.map((networkKey) => {
+                    const network = NETWORKS[networkKey];
+                    return (
+                      <option key={networkKey} value={networkKey} style={{ background: 'var(--bg-primary)' }}>
+                        {network.name} ({network.symbol})
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="🌐 All Networks" style={{ background: 'var(--bg-primary)' }}>
+                  {Object.entries(NETWORKS)
+                    .filter(([key]) => !POPULAR_NETWORKS.includes(key as any))
+                    .map(([key, network]) => (
+                      <option key={key} value={key} style={{ background: 'var(--bg-primary)' }}>
+                        {network.name} ({network.symbol})
+                      </option>
+                    ))}
+                </optgroup>
               </select>
             </div>
           </div>
@@ -448,9 +688,12 @@ export const CreateAgent: React.FC = () => {
             <p className="text-secondary" style={{ fontSize: '14px', marginBottom: '8px' }}>
               🤖 <strong>AI-Powered Trading:</strong> The AI will intelligently determine the best tokens, amounts, and strategies based on your custom prompt above.
             </p>
-            <p className="text-secondary" style={{ fontSize: '12px' }}>
+            <p className="text-secondary" style={{ fontSize: '12px', marginBottom: '8px' }}>
               💡 You can leave these fields as defaults, or override them if you have specific preferences. The AI will use your custom prompt as the primary instruction.
             </p>
+            <div style={{ fontSize: '12px', color: 'var(--metallic-gold)' }}>
+              🪙 <strong>Available tokens on {NETWORKS[agentConfig.network as keyof typeof NETWORKS]?.name}:</strong> {availableTokens.join(', ')}
+            </div>
           </div>
 
           <div className="grid grid-3 gap-4">
@@ -471,9 +714,9 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                {COINS.map(coin => (
-                  <option key={coin} value={coin} style={{ background: 'var(--bg-primary)' }}>
-                    {coin}
+                {availableTokens.map(token => (
+                  <option key={token} value={token} style={{ background: 'var(--bg-primary)' }}>
+                    {token}
                   </option>
                 ))}
               </select>
@@ -496,9 +739,9 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                {COINS.map(coin => (
-                  <option key={coin} value={coin} style={{ background: 'var(--bg-primary)' }}>
-                    {coin}
+                {availableTokens.map(token => (
+                  <option key={token} value={token} style={{ background: 'var(--bg-primary)' }}>
+                    {token}
                   </option>
                 ))}
               </select>
@@ -527,7 +770,7 @@ export const CreateAgent: React.FC = () => {
             </div>
           </div>
 
-          <div className="grid grid-2 gap-4">
+          <div className="grid grid-3 gap-4">
             <div>
               <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
                 📊 Strategy
@@ -573,6 +816,33 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               />
+            </div>
+
+            <div>
+              <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
+                ⚡ Slippage Tolerance (%)
+              </label>
+              <input
+                type="number"
+                min="1"
+                max="50"
+                step="1"
+                value={agentConfig.slippageTolerance}
+                onChange={(e) => setAgentConfig({...agentConfig, slippageTolerance: e.target.value})}
+                placeholder="10"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'var(--glass-bg-dark)',
+                  border: '1px solid var(--glass-border-dark)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px'
+                }}
+              />
+              <small className="text-secondary" style={{ fontSize: '11px' }}>
+                Higher slippage = more likely to execute, but worse price
+              </small>
             </div>
           </div>
 
@@ -626,7 +896,7 @@ export const CreateAgent: React.FC = () => {
   const renderDeployStep = () => (
     <div className="step-container">
       <div className="text-center mb-8">
-        <h2 className="metallic-text mb-4">🚀 Step 3: Deploy Your Agent</h2>
+        <h2 className="metallic-text mb-4">🚀 Step 4: Deploy Your Agent</h2>
         <p className="text-secondary">
           Review your configuration and deploy your trading agent.
         </p>
@@ -715,6 +985,13 @@ export const CreateAgent: React.FC = () => {
       {/* Step 1: Wallet Generation */}
       {renderWalletStep()}
 
+      {/* Step 1.5: Templates (only show if wallet exists) */}
+      {wallet && (
+        <div className="mt-8">
+          {renderTemplatesStep()}
+        </div>
+      )}
+
       {/* Step 2: Agent Configuration (only show if wallet exists) */}
       {wallet && (
         <div className="mt-8">
@@ -723,7 +1000,7 @@ export const CreateAgent: React.FC = () => {
       )}
 
       {/* Step 3: Deploy (only show if wallet and config are ready) */}
-      {wallet && agentConfig.name && agentConfig.amount && (agentConfig.strategy !== 'CUSTOM' || agentConfig.customStrategy) && (
+      {wallet && agentConfig.name && agentConfig.customPrompt && agentConfig.amount && (
         <div className="mt-8">
           {renderDeployStep()}
         </div>

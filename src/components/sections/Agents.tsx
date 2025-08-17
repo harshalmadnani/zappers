@@ -1,14 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Play, Pause, Settings, BarChart3, Zap, ExternalLink } from 'lucide-react';
+import { Bot, Play, Pause, BarChart3, Zap, Trash2, Eye, Activity, X, Clock, CheckCircle, AlertCircle } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
-import { agentService } from '../../lib/supabase';
-import type { Agent } from '../../types/database';
+import { backendApiService, type Bot as BackendBot, type BotLog } from '../../lib/backendApi';
 
 export const Agents: React.FC = () => {
   const { user } = usePrivy();
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<BackendBot[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedBot, setSelectedBot] = useState<BackendBot | null>(null);
+  const [showLogsModal, setShowLogsModal] = useState(false);
+  const [botLogs, setBotLogs] = useState<BotLog[]>([]);
+  const [logsLoading, setLogsLoading] = useState(false);
 
   useEffect(() => {
     const fetchUserAgents = async () => {
@@ -28,11 +31,20 @@ export const Agents: React.FC = () => {
       try {
         setLoading(true);
         setError(null);
-        const userAgents = await agentService.getAgentsByUserWallet(userWallet);
-        setAgents(userAgents);
+        const userAgents = await backendApiService.getBotsByUserWallet(userWallet);
+        
+        // Ensure we have a valid array
+        if (Array.isArray(userAgents)) {
+          setAgents(userAgents);
+        } else {
+          console.warn('API returned non-array data:', userAgents);
+          setAgents([]);
+          setError('Received invalid data format from server.');
+        }
       } catch (err) {
         console.error('Error fetching user agents:', err);
         setError('Failed to load your agents. Please try again.');
+        setAgents([]); // Ensure agents is always an array
       } finally {
         setLoading(false);
       }
@@ -41,16 +53,122 @@ export const Agents: React.FC = () => {
     fetchUserAgents();
   }, [user]);
 
-  const getStatusColor = (agent: Agent) => {
-    return agent.public_key ? 'var(--metallic-gold)' : 'var(--text-secondary)';
+  const getStatusColor = (agent: BackendBot) => {
+    return agent.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)';
   };
 
-  const getStatusText = (agent: Agent) => {
-    return agent.public_key ? 'Active' : 'Inactive';
+  const getStatusText = (agent: BackendBot) => {
+    return agent.isActive ? 'Active' : 'Inactive';
   };
 
-  const getStatusIcon = (agent: Agent) => {
-    return agent.public_key ? Play : Pause;
+  const getStatusIcon = (agent: BackendBot) => {
+    return agent.isActive ? Play : Pause;
+  };
+
+  // Toggle agent active status
+  const toggleAgentStatus = async (agent: BackendBot) => {
+    try {
+      if (agent.isActive) {
+        await backendApiService.deactivateBot(agent.id);
+      } else {
+        await backendApiService.activateBot(agent.id);
+      }
+      
+      // Refresh the agents list
+      const userWallet = user?.wallet?.address || '';
+      if (userWallet) {
+        const updatedAgents = await backendApiService.getBotsByUserWallet(userWallet);
+        if (Array.isArray(updatedAgents)) {
+          setAgents(updatedAgents);
+        } else {
+          console.warn('Toggle: API returned non-array data:', updatedAgents);
+          setAgents([]);
+        }
+      }
+    } catch (err) {
+      console.error('Error toggling agent status:', err);
+      setError('Failed to update agent status. Please try again.');
+    }
+  };
+
+  // Delete agent
+  const deleteAgent = async (agent: BackendBot) => {
+    if (!confirm(`Are you sure you want to delete "${agent.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await backendApiService.deleteBot(agent.id);
+      
+      // Refresh the agents list
+      const userWallet = user?.wallet?.address || '';
+      if (userWallet) {
+        const updatedAgents = await backendApiService.getBotsByUserWallet(userWallet);
+        setAgents(updatedAgents);
+      }
+    } catch (err) {
+      console.error('Error deleting agent:', err);
+      setError('Failed to delete agent. Please try again.');
+    }
+  };
+
+  // View bot logs
+  const viewBotLogs = async (bot: BackendBot) => {
+    setSelectedBot(bot);
+    setShowLogsModal(true);
+    setLogsLoading(true);
+    setBotLogs([]);
+
+    try {
+      const logs = await backendApiService.getBotLogs(bot.id);
+      setBotLogs(Array.isArray(logs) ? logs : []);
+    } catch (err) {
+      console.error('Error fetching bot logs:', err);
+      setBotLogs([]);
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
+  // Close logs modal
+  const closeLogsModal = () => {
+    setShowLogsModal(false);
+    setSelectedBot(null);
+    setBotLogs([]);
+  };
+
+  // Refresh bot status
+  const refreshBotStatus = async (botId: string) => {
+    try {
+      const updatedBot = await backendApiService.getBotById(botId);
+      setAgents(prevAgents => 
+        prevAgents.map(agent => 
+          agent.id === botId ? updatedBot : agent
+        )
+      );
+    } catch (err) {
+      console.error('Error refreshing bot status:', err);
+    }
+  };
+
+  // Format log level
+  const getLogLevelIcon = (level: string) => {
+    if (!level || typeof level !== 'string') {
+      return <Activity size={14} color="var(--text-secondary)" />;
+    }
+    
+    switch (level.toLowerCase()) {
+      case 'error':
+        return <AlertCircle size={14} color="#ff4444" />;
+      case 'warn':
+      case 'warning':
+        return <AlertCircle size={14} color="#ffa500" />;
+      case 'success':
+        return <CheckCircle size={14} color="#00ff00" />;
+      case 'info':
+      default:
+        return <Activity size={14} color="var(--text-secondary)" />;
+    }
   };
 
   return (
@@ -70,7 +188,7 @@ export const Agents: React.FC = () => {
               <Bot size={24} color="var(--bg-primary)" />
             </div>
             <div>
-              <h3>{agents.length}</h3>
+              <h3>{Array.isArray(agents) ? agents.length : 0}</h3>
               <p className="text-secondary">Total Agents</p>
             </div>
           </div>
@@ -82,7 +200,7 @@ export const Agents: React.FC = () => {
               <BarChart3 size={24} color="var(--bg-primary)" />
             </div>
             <div>
-              <h3 className="metallic-text">{agents.filter(agent => agent.public_key).length}</h3>
+              <h3 className="metallic-text">{Array.isArray(agents) ? agents.filter(agent => agent.isActive).length : 0}</h3>
               <p className="text-secondary">Active Agents</p>
             </div>
           </div>
@@ -94,7 +212,7 @@ export const Agents: React.FC = () => {
               <Zap size={24} color="var(--bg-primary)" />
             </div>
             <div>
-              <h3>{agents.filter(agent => !agent.public_key).length}</h3>
+              <h3>{Array.isArray(agents) ? agents.filter(agent => !agent.isActive).length : 0}</h3>
               <p className="text-secondary">Inactive Agents</p>
             </div>
           </div>
@@ -104,7 +222,7 @@ export const Agents: React.FC = () => {
       {/* Agent List */}
       <div>
         <div className="flex justify-between items-center mb-6">
-          <h2>Your Agents ({agents.length})</h2>
+          <h2>Your Agents ({Array.isArray(agents) ? agents.length : 0})</h2>
           <button 
             className="btn btn-primary"
             onClick={() => window.location.href = '/#create'}
@@ -133,7 +251,7 @@ export const Agents: React.FC = () => {
               </button>
             </div>
           </div>
-        ) : agents.length === 0 ? (
+        ) : !Array.isArray(agents) || agents.length === 0 ? (
           <div className="text-center py-12">
             <div className="card">
               <Bot size={48} color="var(--text-secondary)" style={{ margin: '0 auto 16px' }} />
@@ -149,7 +267,7 @@ export const Agents: React.FC = () => {
           </div>
         ) : (
           <div className="grid gap-6">
-            {agents.map((agent) => {
+            {Array.isArray(agents) && agents.map((agent) => {
               const StatusIcon = getStatusIcon(agent);
               return (
                 <div key={agent.id} className="card">
@@ -165,7 +283,7 @@ export const Agents: React.FC = () => {
                         <Bot size={24} color={getStatusColor(agent)} />
                       </div>
                       <div>
-                        <h3 className="card-title">{agent.agent_name || 'Unnamed Agent'}</h3>
+                        <h3 className="card-title">{agent.name || 'Unnamed Agent'}</h3>
                         <div className="flex items-center gap-2 mt-2">
                           <StatusIcon size={12} color={getStatusColor(agent)} />
                           <span 
@@ -178,102 +296,101 @@ export const Agents: React.FC = () => {
                             {getStatusText(agent)}
                           </span>
                           <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                            • Created: {new Date(agent.created_at).toLocaleDateString()}
+                            • Created: {new Date(agent.createdAt).toLocaleDateString()}
                           </span>
                         </div>
                       </div>
                     </div>
                     
                     <div className="flex gap-2">
-                      <button className="btn btn-ghost" style={{ padding: '8px' }}>
-                        <Settings size={16} />
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ padding: '8px' }}
+                        onClick={() => viewBotLogs(agent)}
+                        title="View Logs"
+                      >
+                        <Eye size={16} />
                       </button>
-                      {agent.agent_deployed_link && (
-                        <a
-                          href={agent.agent_deployed_link}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn btn-ghost"
-                          style={{ padding: '8px' }}
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                      )}
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ padding: '8px' }}
+                        onClick={() => refreshBotStatus(agent.id)}
+                        title="Refresh Status"
+                      >
+                        <Activity size={16} />
+                      </button>
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ padding: '8px' }}
+                        onClick={() => toggleAgentStatus(agent)}
+                        title={agent.isActive ? 'Deactivate Agent' : 'Activate Agent'}
+                      >
+                        {agent.isActive ? <Pause size={16} /> : <Play size={16} />}
+                      </button>
+                      <button 
+                        className="btn btn-ghost" 
+                        style={{ padding: '8px', color: '#ff4444' }}
+                        onClick={() => deleteAgent(agent)}
+                        title="Delete Agent"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </div>
                   </div>
 
                   {/* Agent Configuration Display */}
-                  {agent.agent_configuration && (
-                    <div className="mb-4">
-                      <div className="glass-dark rounded-lg p-4">
-                        <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--metallic-gold)' }}>
-                          Configuration
-                        </h4>
-                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                          {(() => {
-                            try {
-                              const config = JSON.parse(agent.agent_configuration);
-                              return (
-                                <div className="grid gap-3">
-                                  {/* Handle both old and new configuration formats */}
-                                  {config.prompt && (
-                                    <div>
-                                      <strong>AI Prompt:</strong> 
-                                      <div style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
-                                        {config.prompt}
-                                      </div>
-                                    </div>
-                                  )}
-                                  {config.description && (
-                                    <div><strong>Description:</strong> {config.description}</div>
-                                  )}
-                                  {config.swapConfig && (
-                                    <div>
-                                      <strong>Trading Configuration:</strong>
-                                      <div className="grid grid-2 gap-2 mt-2">
-                                        <div>🔄 {config.swapConfig.originSymbol} → {config.swapConfig.destinationSymbol}</div>
-                                        <div>💰 Amount: {config.swapConfig.amount}</div>
-                                        <div>🌐 Network: {config.swapConfig.originBlockchain}</div>
-                                        <div>🧪 Mode: {config.swapConfig.isTest ? 'Test' : 'Live'}</div>
-                                      </div>
-                                    </div>
-                                  )}
-                                  {config.network && !config.swapConfig && (
-                                    <div><strong>Network:</strong> {config.network}</div>
-                                  )}
-                                  {config.strategy && !config.swapConfig && (
-                                    <div><strong>Strategy:</strong> {config.strategy}</div>
-                                  )}
-                                  {config.isActive !== undefined && (
-                                    <div>
-                                      <strong>Status:</strong> 
-                                      <span style={{ color: config.isActive ? '#00ff00' : '#ffa500', marginLeft: '8px' }}>
-                                        {config.isActive ? '🟢 Active' : '🟡 Inactive'}
-                                      </span>
-                                    </div>
-                                  )}
-                                </div>
-                              );
-                            } catch {
-                              const configStr = agent.agent_configuration || '';
-                              return <div>{configStr.slice(0, 200)}...</div>;
-                            }
-                          })()}
+                  <div className="mb-4">
+                    <div className="glass-dark rounded-lg p-4">
+                      <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--metallic-gold)' }}>
+                        Configuration
+                      </h4>
+                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <div className="grid gap-3">
+                          {/* AI Prompt */}
+                          {agent.prompt && (
+                            <div>
+                              <strong>AI Prompt:</strong> 
+                              <div style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
+                                {agent.prompt}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Trading Configuration */}
+                          {agent.swapConfig && (
+                            <div>
+                              <strong>Trading Configuration:</strong>
+                              <div className="grid grid-2 gap-2 mt-2">
+                                <div>🔄 {agent.swapConfig.originSymbol} → {agent.swapConfig.destinationSymbol}</div>
+                                <div>💰 Amount: {agent.swapConfig.amount}</div>
+                                <div>🌐 Network: {agent.swapConfig.originBlockchain}</div>
+                                <div>📍 Wallet: {agent.swapConfig.senderAddress.slice(0, 6)}...{agent.swapConfig.senderAddress.slice(-4)}</div>
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Status */}
+                          <div>
+                            <strong>Status:</strong> 
+                            <span style={{ color: agent.isActive ? '#00ff00' : '#ffa500', marginLeft: '8px' }}>
+                              {agent.isActive ? '🟢 Active' : '🟡 Inactive'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
-                  )}
+                  </div>
 
                   {/* Agent Wallet Info */}
                   <div className="grid grid-2 gap-4">
                     <div className="glass-dark rounded-lg p-4">
                       <div className="text-secondary mb-2" style={{ fontSize: '12px' }}>
-                        Public Key
+                        Wallet Address
                       </div>
                       <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
-                        {agent.public_key ? 
-                          `${agent.public_key.slice(0, 6)}...${agent.public_key.slice(-4)}` : 
-                          'Not generated'
+                        {agent.swapConfig?.senderAddress ? 
+                          `${agent.swapConfig.senderAddress.slice(0, 6)}...${agent.swapConfig.senderAddress.slice(-4)}` : 
+                          'Not configured'
                         }
                       </div>
                     </div>
@@ -303,6 +420,173 @@ export const Agents: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Logs Modal */}
+      {showLogsModal && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 1000,
+          }}
+          onClick={closeLogsModal}
+        >
+          <div 
+            className="card"
+            style={{
+              width: '90%',
+              maxWidth: '800px',
+              maxHeight: '80vh',
+              overflow: 'hidden',
+              display: 'flex',
+              flexDirection: 'column'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4" style={{ borderBottom: '1px solid var(--glass-border-dark)', paddingBottom: '16px' }}>
+              <div>
+                <h2 style={{ marginBottom: '4px' }}>📊 Bot Logs</h2>
+                <p className="text-secondary" style={{ fontSize: '14px' }}>
+                  {selectedBot?.name} ({selectedBot?.id})
+                </p>
+              </div>
+              <button 
+                className="btn btn-ghost"
+                onClick={closeLogsModal}
+                style={{ padding: '8px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Bot Status Summary */}
+            {selectedBot && (
+              <div className="mb-4 p-3 glass-dark rounded-lg">
+                <div className="grid grid-3 gap-4" style={{ fontSize: '12px' }}>
+                  <div>
+                    <strong>Status:</strong>
+                    <div className="flex items-center gap-2 mt-1">
+                      <div 
+                        style={{ 
+                          width: '8px', 
+                          height: '8px', 
+                          borderRadius: '50%',
+                          backgroundColor: selectedBot.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)'
+                        }}
+                      />
+                      <span style={{ color: selectedBot.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)' }}>
+                        {selectedBot.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  <div>
+                    <strong>Created:</strong>
+                    <div style={{ marginTop: '2px' }}>
+                      {new Date(selectedBot.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  <div>
+                    <strong>Trading Pair:</strong>
+                    <div style={{ marginTop: '2px' }}>
+                      {selectedBot.swapConfig?.originSymbol} → {selectedBot.swapConfig?.destinationSymbol}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Logs Content */}
+            <div style={{ flex: 1, overflow: 'auto' }}>
+              {logsLoading ? (
+                <div className="text-center py-8">
+                  <Activity size={24} className="animate-spin" color="var(--metallic-gold)" />
+                  <p className="text-secondary mt-2">Loading logs...</p>
+                </div>
+              ) : botLogs.length === 0 ? (
+                <div className="text-center py-8">
+                  <Clock size={24} color="var(--text-secondary)" />
+                  <p className="text-secondary mt-2">No logs available yet</p>
+                  <small className="text-secondary">Logs will appear here once the bot starts executing</small>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {botLogs.map((log, index) => (
+                    <div 
+                      key={log.id || index} 
+                      className="glass-dark rounded-lg p-3"
+                      style={{ fontSize: '13px' }}
+                    >
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex items-center gap-2">
+                          {getLogLevelIcon(log.level)}
+                          <span 
+                            style={{ 
+                              color: !log.level ? 'var(--text-primary)' :
+                                     log.level.toLowerCase() === 'error' ? '#ff4444' : 
+                                     log.level.toLowerCase() === 'warn' ? '#ffa500' :
+                                     log.level.toLowerCase() === 'success' ? '#00ff00' : 'var(--text-primary)',
+                              fontWeight: '500',
+                              textTransform: 'uppercase',
+                              fontSize: '11px'
+                            }}
+                          >
+                            {log.level || 'INFO'}
+                          </span>
+                        </div>
+                        <span className="text-secondary" style={{ fontSize: '11px' }}>
+                          {log.timestamp ? new Date(log.timestamp).toLocaleString() : 'No timestamp'}
+                        </span>
+                      </div>
+                      <div style={{ color: 'var(--text-primary)', marginBottom: '8px' }}>
+                        {log.message || 'No message'}
+                      </div>
+                      {log.data && (
+                        <details style={{ fontSize: '11px' }}>
+                          <summary className="text-secondary cursor-pointer">Additional Data</summary>
+                          <pre 
+                            style={{ 
+                              marginTop: '8px', 
+                              padding: '8px', 
+                              background: 'var(--bg-primary)', 
+                              borderRadius: '4px',
+                              overflow: 'auto',
+                              fontSize: '10px'
+                            }}
+                          >
+                            {JSON.stringify(log.data, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="flex justify-between items-center mt-4 pt-4" style={{ borderTop: '1px solid var(--glass-border-dark)' }}>
+              <small className="text-secondary">
+                Showing {botLogs.length} log entries
+              </small>
+              <button 
+                className="btn btn-secondary"
+                onClick={() => selectedBot && viewBotLogs(selectedBot)}
+              >
+                <Activity size={14} />
+                Refresh Logs
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
