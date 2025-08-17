@@ -10,6 +10,9 @@ export interface BotConfig {
   originBlockchain: string;
   destinationBlockchain: string;
   slippageTolerance: string;
+  crossChain?: boolean;
+  strategy?: string;
+  isTest?: boolean;
 }
 
 export interface CreateBotRequest {

@@ -44,15 +44,15 @@ export const CreateAgent: React.FC = () => {
   // Example templates for quick setup
   const exampleTemplates = [
     {
-      id: 'simple-arbitrum',
-      name: '🚀 Simple Same-Chain Bot',
-      description: 'Arbitrum USDC → ETH swap',
+      id: 'simple-katana',
+      name: '🚀 Simple Katana Bot',
+      description: 'Katana USDC → ETH swap',
       icon: '⚡',
       config: {
-        name: 'Simple USDC-ETH Bot',
-        description: 'Simple bot that swaps USDC for ETH on Arbitrum',
-        network: 'ARBITRUM',
-        customPrompt: 'Simple bot that swaps 2 USDC for ETH on Arbitrum every time the price is favorable',
+        name: 'Simple Katana USDC-ETH Bot',
+        description: 'Simple bot that swaps USDC for ETH on Katana',
+        network: 'KATANA',
+        customPrompt: 'Simple bot that swaps 2 USDC for ETH on Katana every time the price is favorable',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
         amount: '2',
@@ -79,6 +79,66 @@ export const CreateAgent: React.FC = () => {
         interval: '30',
         slippageTolerance: '15',
         isTest: true
+      }
+    },
+    {
+      id: 'cross-chain-katana',
+      name: '⚔️ Cross-Chain ARB → Katana',
+      description: 'Arbitrum to Katana cross-chain trading',
+      icon: '🌐',
+      config: {
+        name: 'CROSS-CHAIN-ARB-TO-KATANA-BOT',
+        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Katana',
+        network: 'ARBITRUM',
+        customPrompt: 'Cross-chain trading bot that swaps 5 USDC from Arbitrum to ETH on Katana - REAL CROSS-CHAIN TRADING',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '5',
+        strategy: 'CUSTOM',
+        customStrategy: 'cross_chain_arbitrage',
+        interval: '45',
+        slippageTolerance: '15',
+        isTest: false
+      }
+    },
+    {
+      id: 'cross-chain-zircuit',
+      name: '🔷 Cross-Chain ARB → Zircuit',
+      description: 'Arbitrum to Zircuit L2 trading',
+      icon: '⚡',
+      config: {
+        name: 'CROSS-CHAIN-ARB-TO-ZIRCUIT-BOT',
+        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Zircuit L2',
+        network: 'ARBITRUM',
+        customPrompt: 'Cross-chain trading bot that swaps 7 USDC from Arbitrum to ETH on Zircuit L2 - REAL CROSS-CHAIN TRADING',
+        originSymbol: 'USDC',
+        destinationSymbol: 'ETH',
+        amount: '7',
+        strategy: 'CUSTOM',
+        customStrategy: 'cross_chain_l2_arbitrage',
+        interval: '35',
+        slippageTolerance: '12',
+        isTest: false
+      }
+    },
+    {
+      id: 'cross-chain-flow',
+      name: '🌊 Cross-Chain ARB → Flow EVM',
+      description: 'Arbitrum to Flow EVM trading',
+      icon: '💎',
+      config: {
+        name: 'CROSS-CHAIN-ARB-TO-FLOW-EVM-BOT',
+        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to FLOW tokens on Flow EVM',
+        network: 'ARBITRUM',
+        customPrompt: 'Cross-chain trading bot that swaps 6 USDC from Arbitrum to FLOW tokens on Flow EVM - REAL CROSS-CHAIN TRADING',
+        originSymbol: 'USDC',
+        destinationSymbol: 'FLOW',
+        amount: '6',
+        strategy: 'CUSTOM',
+        customStrategy: 'cross_chain_emerging_network',
+        interval: '40',
+        slippageTolerance: '20',
+        isTest: false
       }
     },
     {
@@ -271,8 +331,22 @@ export const CreateAgent: React.FC = () => {
           destinationSymbol: agentConfig.destinationSymbol,
           amount: agentConfig.amount,
           originBlockchain: selectedNetwork.apiName,
-          destinationBlockchain: selectedNetwork.apiName, // Same network for now
+          destinationBlockchain: (() => {
+            // For cross-chain bots, determine destination blockchain from strategy
+            if (agentConfig.strategy === 'CUSTOM' && agentConfig.customStrategy?.includes('cross_chain')) {
+              if (agentConfig.customStrategy.includes('katana')) return 'katana';
+              if (agentConfig.customStrategy.includes('zircuit')) return 'zircuit';
+              if (agentConfig.customStrategy.includes('flow') || agentConfig.customStrategy.includes('emerging_network')) return 'flow-evm';
+            }
+            return selectedNetwork.apiName; // Same network for regular bots
+          })(),
           slippageTolerance: agentConfig.slippageTolerance,
+          // Add cross-chain specific fields if this is a custom strategy
+          ...(agentConfig.strategy === 'CUSTOM' && agentConfig.customStrategy?.includes('cross_chain') && {
+            crossChain: true,
+            strategy: agentConfig.customStrategy
+          }),
+          isTest: agentConfig.isTest,
         }
       };
 
@@ -526,6 +600,16 @@ export const CreateAgent: React.FC = () => {
                   <div>🌐 {NETWORKS[template.config.network as keyof typeof NETWORKS]?.name}</div>
                   <div>💱 {template.config.originSymbol} → {template.config.destinationSymbol}</div>
                   <div>💰 {template.config.amount} {template.config.originSymbol}</div>
+                  {template.config.strategy === 'CUSTOM' && template.config.customStrategy?.includes('cross_chain') && (
+                    <div style={{ color: '#00ff00', marginTop: '4px' }}>
+                      🔗 Cross-Chain Trading
+                    </div>
+                  )}
+                  {!template.config.isTest && (
+                    <div style={{ color: '#ff4444', marginTop: '4px' }}>
+                      🚀 LIVE TRADING MODE
+                    </div>
+                  )}
                 </div>
                 <button 
                   className="btn btn-secondary"

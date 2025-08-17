@@ -1,24 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ExternalLink, Bot } from 'lucide-react';
-import { agentService } from '../../lib/supabase';
-import type { Agent } from '../../types/database';
+import { Search, Bot, Wallet } from 'lucide-react';
+import { backendApiService, type Bot as BackendBot } from '../../lib/backendApi';
+import { mobulaApiService, type WalletPortfolio } from '../../lib/mobulaApi';
 
 export const Explore: React.FC = () => {
-  const [agents, setAgents] = useState<Agent[]>([]);
+  const [agents, setAgents] = useState<BackendBot[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [portfolios, setPortfolios] = useState<Record<string, WalletPortfolio>>({});
+  const [portfolioLoading, setPortfolioLoading] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const fetchAgents = async () => {
       try {
         setLoading(true);
-        const fetchedAgents = await agentService.getAllAgents();
-        setAgents(fetchedAgents);
+        const fetchedAgents = await backendApiService.getAllBots();
+        setAgents(Array.isArray(fetchedAgents) ? fetchedAgents : []);
         setError(null);
+        
+        // Fetch portfolios for each agent
+        fetchedAgents.forEach(agent => {
+          if (agent.swapConfig?.senderAddress) {
+            fetchPortfolio(agent.swapConfig.senderAddress);
+          }
+        });
       } catch (err) {
         console.error('Error fetching agents:', err);
         setError('Failed to load agents. Please try again later.');
+        setAgents([]);
       } finally {
         setLoading(false);
       }
@@ -27,9 +37,34 @@ export const Explore: React.FC = () => {
     fetchAgents();
   }, []);
 
+  const fetchPortfolio = async (walletAddress: string) => {
+    if (portfolios[walletAddress] || portfolioLoading[walletAddress]) {
+      return; // Already loaded or loading
+    }
+
+    setPortfolioLoading(prev => ({ ...prev, [walletAddress]: true }));
+
+    try {
+      const portfolio = await mobulaApiService.getWalletPortfolio(walletAddress, {
+        cache: true,
+        stale: 3600, // 1 hour cache
+        filterSpam: true,
+        minliq: 100, // Minimum $100 liquidity
+        pnl: true
+      });
+      
+      setPortfolios(prev => ({ ...prev, [walletAddress]: portfolio }));
+    } catch (err) {
+      console.error(`Error fetching portfolio for ${walletAddress}:`, err);
+    } finally {
+      setPortfolioLoading(prev => ({ ...prev, [walletAddress]: false }));
+    }
+  };
+
   const filteredAgents = agents.filter(agent => 
-    agent.agent_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    agent.user_wallet?.toLowerCase().includes(searchTerm.toLowerCase())
+    agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    agent.userWallet?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    agent.swapConfig?.senderAddress?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
 
@@ -116,113 +151,171 @@ export const Explore: React.FC = () => {
           </div>
         ) : (
           <div className="grid grid-2">
-            {filteredAgents.map((agent) => (
-              <div key={agent.id} className="card">
-                <div className="card-header">
-                  <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="card-title">{agent.agent_name || 'Unnamed Agent'}</h3>
-                      <span 
-                        className="metallic-text" 
-                        style={{ fontSize: '12px', fontWeight: '500' }}
-                      >
-                        by {agent.user_wallet ? `${agent.user_wallet.slice(0, 6)}...${agent.user_wallet.slice(-4)}` : 'Anonymous'}
-                      </span>
-                    </div>
-                    <div className="text-right">
-                      <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                        {new Date(agent.created_at).toLocaleDateString()}
+            {filteredAgents.map((agent) => {
+              const walletAddress = agent.swapConfig?.senderAddress;
+              const portfolio = walletAddress ? portfolios[walletAddress] : null;
+              const isLoadingPortfolio = walletAddress ? portfolioLoading[walletAddress] : false;
+              
+              return (
+                <div key={agent.id} className="card">
+                  <div className="card-header">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h3 className="card-title">{agent.name || 'Unnamed Agent'}</h3>
+                        <span 
+                          className="metallic-text" 
+                          style={{ fontSize: '12px', fontWeight: '500' }}
+                        >
+                          by {agent.userWallet ? `${agent.userWallet.slice(0, 6)}...${agent.userWallet.slice(-4)}` : 'Anonymous'}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {new Date(agent.createdAt).toLocaleDateString()}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  {agent.agent_configuration && (
-                    <div className="card-description">
-                      {(() => {
-                        const configStr = agent.agent_configuration;
-                        if (!configStr) return 'No configuration available';
-                        
-                        try {
-                          const config = JSON.parse(configStr);
-                          // Handle both old and new configuration formats
-                          if (config.prompt) {
-                            return (
-                              <div>
-                                <p style={{ marginBottom: '8px' }}>{config.prompt}</p>
-                                {config.swapConfig && (
-                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                    <span>🔄 {config.swapConfig.originSymbol} → {config.swapConfig.destinationSymbol}</span>
-                                    <span style={{ marginLeft: '12px' }}>💰 {config.swapConfig.amount}</span>
-                                    <span style={{ marginLeft: '12px' }}>🌐 {config.swapConfig.originBlockchain}</span>
-                                  </div>
-                                )}
-                              </div>
-                            );
-                          } else if (config.description) {
-                            return config.description;
-                          } else {
-                            return 'No description available';
-                          }
-                        } catch {
-                          return configStr.slice(0, 100) + '...';
-                        }
-                      })()}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Bot size={16} color="var(--metallic-gold)" />
-                      <span className="text-secondary" style={{ fontSize: '14px' }}>
-                        {(() => {
-                          if (!agent.agent_configuration) return agent.public_key ? 'Active' : 'Inactive';
-                          
-                          try {
-                            const config = JSON.parse(agent.agent_configuration);
-                            if (config.isActive !== undefined) {
-                              return config.isActive ? 'Active' : 'Inactive';
-                            }
-                          } catch {}
-                          return agent.public_key ? 'Active' : 'Inactive';
-                        })()}
-                      </span>
-                    </div>
-                    {(() => {
-                      if (!agent.agent_configuration) return null;
-                      
-                      try {
-                        const config = JSON.parse(agent.agent_configuration);
-                        if (config.swapConfig && config.swapConfig.isTest !== undefined) {
-                          return (
-                            <span style={{ fontSize: '12px', color: config.swapConfig.isTest ? '#ffa500' : '#00ff00' }}>
-                              {config.swapConfig.isTest ? '🧪 Test Mode' : '🚀 Live Mode'}
-                            </span>
-                          );
-                        }
-                      } catch {}
-                      return null;
-                    })()}
-                  </div>
-                  <div className="flex gap-2">
-                    {agent.agent_deployed_link && (
-                      <a
-                        href={agent.agent_deployed_link}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="btn btn-ghost"
-                        style={{ padding: '8px' }}
-                      >
-                        <ExternalLink size={16} />
-                      </a>
+                    
+                    {/* Agent Prompt */}
+                    {agent.prompt && (
+                      <div className="card-description mb-4">
+                        <p style={{ marginBottom: '8px' }}>{agent.prompt}</p>
+                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          <span>🔄 {agent.swapConfig?.originSymbol} → {agent.swapConfig?.destinationSymbol}</span>
+                          <span style={{ marginLeft: '12px' }}>💰 {agent.swapConfig?.amount}</span>
+                          <span style={{ marginLeft: '12px' }}>🌐 {agent.swapConfig?.originBlockchain}</span>
+                        </div>
+                      </div>
                     )}
-                    <button className="btn btn-secondary">
-                      View Details
-                    </button>
+                  </div>
+                  
+                  {/* Portfolio Section */}
+                  <div className="mb-4">
+                    <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--metallic-gold)' }}>
+                      💼 Wallet Portfolio
+                    </h4>
+                    {!walletAddress ? (
+                      <div className="glass-dark rounded-lg p-3">
+                        <p className="text-secondary" style={{ fontSize: '12px' }}>
+                          No wallet address available
+                        </p>
+                      </div>
+                    ) : isLoadingPortfolio ? (
+                      <div className="glass-dark rounded-lg p-3 text-center">
+                        <div className="animate-spin inline-block">⏳</div>
+                        <p className="text-secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
+                          Loading portfolio...
+                        </p>
+                      </div>
+                    ) : portfolio ? (
+                      <div className="glass-dark rounded-lg p-3">
+                        <div className="grid grid-2 gap-3 mb-3">
+                          <div>
+                            <div className="text-secondary" style={{ fontSize: '11px' }}>Total Balance</div>
+                            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                              {mobulaApiService.formatBalance(portfolio.total_wallet_balance)}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="text-secondary" style={{ fontSize: '11px' }}>24h PnL</div>
+                            <div 
+                              style={{ 
+                                fontSize: '14px', 
+                                fontWeight: '600',
+                                color: portfolio.total_pnl_history['24h'] ? 
+                                  (portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized >= 0 ? '#00ff00' : '#ff4444') : 
+                                  'var(--text-secondary)'
+                              }}
+                            >
+                              {portfolio.total_pnl_history['24h'] ? 
+                                mobulaApiService.formatPnL(portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized).value :
+                                'N/A'
+                              }
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Top Assets */}
+                        {portfolio.assets && portfolio.assets.length > 0 && (
+                          <div>
+                            <div className="text-secondary" style={{ fontSize: '11px', marginBottom: '4px' }}>Top Holdings</div>
+                            <div className="space-y-1">
+                              {mobulaApiService.getTopAssets(portfolio.assets, 3).map((asset, index) => (
+                                <div key={asset.asset.id || index} className="flex justify-between items-center">
+                                  <div className="flex items-center gap-2">
+                                    {asset.asset.logo && (
+                                      <img 
+                                        src={asset.asset.logo} 
+                                        alt={asset.asset.symbol}
+                                        style={{ width: '16px', height: '16px', borderRadius: '50%' }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                      />
+                                    )}
+                                    <span style={{ fontSize: '12px' }}>{asset.asset.symbol}</span>
+                                  </div>
+                                  <div style={{ fontSize: '12px', fontWeight: '500' }}>
+                                    {mobulaApiService.formatBalance(asset.estimated_balance)}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="glass-dark rounded-lg p-3">
+                        <p className="text-secondary" style={{ fontSize: '12px' }}>
+                          Portfolio data unavailable
+                        </p>
+                        <button 
+                          className="btn btn-ghost mt-2" 
+                          style={{ padding: '4px 8px', fontSize: '11px' }}
+                          onClick={() => fetchPortfolio(walletAddress)}
+                        >
+                          Retry
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Status and Actions */}
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-2">
+                        <div 
+                          style={{ 
+                            width: '8px', 
+                            height: '8px', 
+                            borderRadius: '50%',
+                            backgroundColor: agent.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)'
+                          }}
+                        />
+                        <span 
+                          className="text-secondary" 
+                          style={{ 
+                            fontSize: '14px',
+                            color: agent.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)'
+                          }}
+                        >
+                          {agent.isActive ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <button 
+                        className="btn btn-ghost"
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        onClick={() => walletAddress && fetchPortfolio(walletAddress)}
+                        disabled={isLoadingPortfolio}
+                      >
+                        <Wallet size={14} />
+                        Refresh
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
