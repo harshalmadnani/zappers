@@ -23,6 +23,7 @@ export const CreateAgent: React.FC = () => {
     name: '',
     description: '',
     network: 'ARBITRUM',
+    destinationNetwork: 'ARBITRUM',
     strategy: 'DCA',
     customStrategy: '',
     customPrompt: '',
@@ -52,6 +53,7 @@ export const CreateAgent: React.FC = () => {
         name: 'Simple Katana USDC-ETH Bot',
         description: 'Simple bot that swaps USDC for ETH on Katana',
         network: 'KATANA',
+        destinationNetwork: 'KATANA',
         customPrompt: 'Simple bot that swaps 2 USDC for ETH on Katana every time the price is favorable',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -71,6 +73,7 @@ export const CreateAgent: React.FC = () => {
         name: 'Cross-Chain ARB-BASE Bot',
         description: 'Cross-chain bot that optimizes trades between Arbitrum and Base',
         network: 'ARBITRUM',
+        destinationNetwork: 'BASE',
         customPrompt: 'Cross-chain bot that swaps USDC from Arbitrum to ETH on Base when arbitrage opportunities arise. Monitor both chains for best prices.',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -90,6 +93,7 @@ export const CreateAgent: React.FC = () => {
         name: 'CROSS-CHAIN-ARB-TO-KATANA-BOT',
         description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Katana',
         network: 'ARBITRUM',
+        destinationNetwork: 'KATANA',
         customPrompt: 'Cross-chain trading bot that swaps 5 USDC from Arbitrum to ETH on Katana - REAL CROSS-CHAIN TRADING',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -110,6 +114,7 @@ export const CreateAgent: React.FC = () => {
         name: 'CROSS-CHAIN-ARB-TO-ZIRCUIT-BOT',
         description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Zircuit L2',
         network: 'ARBITRUM',
+        destinationNetwork: 'ZIRCUIT',
         customPrompt: 'Cross-chain trading bot that swaps 7 USDC from Arbitrum to ETH on Zircuit L2 - REAL CROSS-CHAIN TRADING',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -130,6 +135,7 @@ export const CreateAgent: React.FC = () => {
         name: 'CROSS-CHAIN-ARB-TO-FLOW-EVM-BOT',
         description: 'Cross-chain trading bot that swaps USDC from Arbitrum to FLOW tokens on Flow EVM',
         network: 'ARBITRUM',
+        destinationNetwork: 'FLOW_EVM',
         customPrompt: 'Cross-chain trading bot that swaps 6 USDC from Arbitrum to FLOW tokens on Flow EVM - REAL CROSS-CHAIN TRADING',
         originSymbol: 'USDC',
         destinationSymbol: 'FLOW',
@@ -150,6 +156,7 @@ export const CreateAgent: React.FC = () => {
         name: 'Flow DCA Bot',
         description: 'DCA bot for accumulating FLOW tokens',
         network: 'FLOW_EVM',
+        destinationNetwork: 'FLOW_EVM',
         customPrompt: 'DCA bot that buys FLOW tokens with USDC every hour, investing 10 USDC per trade regardless of price to build a long-term position',
         originSymbol: 'USDC',
         destinationSymbol: 'FLOW',
@@ -169,6 +176,7 @@ export const CreateAgent: React.FC = () => {
         name: 'Base Momentum Bot',
         description: 'Advanced momentum trading on Base network',
         network: 'BASE',
+        destinationNetwork: 'BASE',
         customPrompt: 'Advanced momentum trading bot that buys ETH when price increases 3% in 15 minutes and sells when it drops 2% or gains 5%. Use 50 USDC per trade with tight risk management.',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -188,6 +196,7 @@ export const CreateAgent: React.FC = () => {
         name: 'Polygon Range Bot',
         description: 'Range trading bot for sideways markets',
         network: 'POLYGON',
+        destinationNetwork: 'POLYGON',
         customPrompt: 'Range trading bot that buys POL when price drops to support level around $0.40 and sells at resistance around $0.50. Use 100 USDC per trade.',
         originSymbol: 'USDC',
         destinationSymbol: 'POL',
@@ -207,6 +216,7 @@ export const CreateAgent: React.FC = () => {
         name: 'AI-Powered Custom Bot',
         description: 'Fully AI-driven trading strategy',
         network: 'ARBITRUM',
+        destinationNetwork: 'ARBITRUM',
         customPrompt: 'You are an advanced AI trading bot. Analyze market conditions, choose the best tokens, amounts, and timing for profitable trades. Be conservative but opportunistic. Start with small amounts and scale up successful strategies.',
         originSymbol: 'USDC',
         destinationSymbol: 'ETH',
@@ -332,7 +342,12 @@ export const CreateAgent: React.FC = () => {
           amount: agentConfig.amount,
           originBlockchain: selectedNetwork.apiName,
           destinationBlockchain: (() => {
-            // For cross-chain bots, determine destination blockchain from strategy
+            // Use the explicitly selected destination network if available
+            if (agentConfig.destinationNetwork && agentConfig.destinationNetwork !== agentConfig.network) {
+              const destNetwork = NETWORKS[agentConfig.destinationNetwork as keyof typeof NETWORKS];
+              return destNetwork ? destNetwork.apiName : selectedNetwork.apiName;
+            }
+            // Fallback to strategy-based detection for backward compatibility
             if (agentConfig.strategy === 'CUSTOM' && agentConfig.customStrategy?.includes('cross_chain')) {
               if (agentConfig.customStrategy.includes('katana')) return 'katana';
               if (agentConfig.customStrategy.includes('zircuit')) return 'zircuit';
@@ -359,6 +374,7 @@ export const CreateAgent: React.FC = () => {
         name: '',
         description: '',
         network: 'ARBITRUM',
+        destinationNetwork: 'ARBITRUM',
         strategy: 'DCA',
         customStrategy: '',
         customPrompt: '',
@@ -649,7 +665,7 @@ export const CreateAgent: React.FC = () => {
 
       <div className="card">
         <div className="grid gap-6">
-          <div className="grid grid-2 gap-4">
+          <div className="grid grid-3 gap-4">
             <div>
               <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
                 🤖 Agent Name *
@@ -673,7 +689,7 @@ export const CreateAgent: React.FC = () => {
 
             <div>
               <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
-                🌐 Network *
+                🌐 Source Blockchain *
               </label>
               <select
                 value={agentConfig.network}
@@ -688,6 +704,45 @@ export const CreateAgent: React.FC = () => {
                     destinationSymbol: newTokens.includes(agentConfig.destinationSymbol) ? agentConfig.destinationSymbol : newTokens[1] || 'USDC'
                   });
                 }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: 'var(--glass-bg-dark)',
+                  border: '1px solid var(--glass-border-dark)',
+                  borderRadius: '8px',
+                  color: 'var(--text-primary)',
+                  fontSize: '14px'
+                }}
+              >
+                <optgroup label="🔥 Popular Networks" style={{ background: 'var(--bg-primary)' }}>
+                  {POPULAR_NETWORKS.map((networkKey) => {
+                    const network = NETWORKS[networkKey];
+                    return (
+                      <option key={networkKey} value={networkKey} style={{ background: 'var(--bg-primary)' }}>
+                        {network.name} ({network.symbol})
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="🌐 All Networks" style={{ background: 'var(--bg-primary)' }}>
+                  {Object.entries(NETWORKS)
+                    .filter(([key]) => !POPULAR_NETWORKS.includes(key as any))
+                    .map(([key, network]) => (
+                      <option key={key} value={key} style={{ background: 'var(--bg-primary)' }}>
+                        {network.name} ({network.symbol})
+                      </option>
+                    ))}
+                </optgroup>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
+                🎯 Destination Blockchain *
+              </label>
+              <select
+                value={agentConfig.destinationNetwork || agentConfig.network}
+                onChange={(e) => setAgentConfig({...agentConfig, destinationNetwork: e.target.value})}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -994,8 +1049,12 @@ export const CreateAgent: React.FC = () => {
             <span>{agentConfig.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-secondary">Network:</span>
+            <span className="text-secondary">Source Blockchain:</span>
             <span>{NETWORKS[agentConfig.network as keyof typeof NETWORKS]?.name}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-secondary">Destination Blockchain:</span>
+            <span>{NETWORKS[agentConfig.destinationNetwork as keyof typeof NETWORKS]?.name}</span>
           </div>
           <div className="flex justify-between">
             <span className="text-secondary">Trading Pair:</span>

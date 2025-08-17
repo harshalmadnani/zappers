@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Play, Pause, BarChart3, Zap, Trash2, Eye, Activity, X, Clock, CheckCircle, AlertCircle, Wallet } from 'lucide-react';
+import { Bot, Play, Pause, BarChart3, Zap, Trash2, Eye, Activity, X, Clock, CheckCircle, AlertCircle, Wallet, Copy, Check } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { backendApiService, type Bot as BackendBot, type BotLog } from '../../lib/backendApi';
-import { mobulaApiService, type WalletPortfolio } from '../../lib/mobulaApi';
+import { combinedPortfolioService, type EnhancedWalletPortfolio } from '../../lib/combinedPortfolioService';
+import { mobulaApiService } from '../../lib/mobulaApi';
 
 export const Agents: React.FC = () => {
   const { user } = usePrivy();
@@ -13,54 +14,69 @@ export const Agents: React.FC = () => {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [botLogs, setBotLogs] = useState<BotLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [portfolios, setPortfolios] = useState<Record<string, WalletPortfolio>>({});
+  const [portfolios, setPortfolios] = useState<Record<string, EnhancedWalletPortfolio>>({});
   const [portfolioLoading, setPortfolioLoading] = useState<Record<string, boolean>>({});
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
+
+  const fetchUserAgents = async () => {
+    if (!user) {
+      setError('Please log in to view your agents');
+      setLoading(false);
+      return;
+    }
+
+    const userWallet = user.wallet?.address || '';
+    if (!userWallet) {
+      setError('Unable to identify user wallet. Please try logging in again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setError(null);
+      const userAgents = await backendApiService.getBotsByUserWallet(userWallet);
+      
+      // Ensure we have a valid array
+      if (Array.isArray(userAgents)) {
+        setAgents(userAgents);
+        setLastUpdate(new Date());
+        
+        // Fetch portfolios for each agent
+        userAgents.forEach(agent => {
+          if (agent.swapConfig?.senderAddress) {
+            fetchPortfolio(agent.swapConfig.senderAddress);
+          }
+        });
+      } else {
+        console.warn('API returned non-array data:', userAgents);
+        setAgents([]);
+        setError('Received invalid data format from server.');
+      }
+    } catch (err) {
+      console.error('Error fetching user agents:', err);
+      setError('Failed to load your agents. Please try again.');
+      setAgents([]); // Ensure agents is always an array
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchUserAgents = async () => {
-      if (!user) {
-        setError('Please log in to view your agents');
-        setLoading(false);
-        return;
-      }
-
-      const userWallet = user.wallet?.address || '';
-      if (!userWallet) {
-        setError('Unable to identify user wallet. Please try logging in again.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const userAgents = await backendApiService.getBotsByUserWallet(userWallet);
-        
-        // Ensure we have a valid array
-        if (Array.isArray(userAgents)) {
-          setAgents(userAgents);
-          
-          // Fetch portfolios for each agent
-          userAgents.forEach(agent => {
-            if (agent.swapConfig?.senderAddress) {
-              fetchPortfolio(agent.swapConfig.senderAddress);
-            }
-          });
-        } else {
-          console.warn('API returned non-array data:', userAgents);
-          setAgents([]);
-          setError('Received invalid data format from server.');
-        }
-      } catch (err) {
-        console.error('Error fetching user agents:', err);
-        setError('Failed to load your agents. Please try again.');
-        setAgents([]); // Ensure agents is always an array
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchUserAgents();
+    
+    // Set up real-time refresh every 30 seconds
+    const interval = setInterval(() => {
+      if (user) {
+        fetchUserAgents();
+      }
+    }, 30000); // 30 seconds
+
+    // Cleanup interval on unmount
+    return () => {
+      clearInterval(interval);
+    };
   }, [user]);
 
   const fetchPortfolio = async (walletAddress: string) => {
@@ -71,12 +87,12 @@ export const Agents: React.FC = () => {
     setPortfolioLoading(prev => ({ ...prev, [walletAddress]: true }));
 
     try {
-      const portfolio = await mobulaApiService.getWalletPortfolio(walletAddress, {
+      const portfolio = await combinedPortfolioService.getEnhancedPortfolio(walletAddress, {
+        useMobula: true,
+        useTheGraph: true,
+        networks: ['mainnet', 'arbitrum-one', 'avalanche', 'base', 'bsc', 'matic', 'optimism'],
         cache: true,
-        stale: 3600, // 1 hour cache
-        filterSpam: true,
-        minliq: 100, // Minimum $100 liquidity
-        pnl: true
+        stale: 3600 // 1 hour cache
       });
       
       setPortfolios(prev => ({ ...prev, [walletAddress]: portfolio }));
@@ -185,6 +201,19 @@ export const Agents: React.FC = () => {
     }
   };
 
+  // Copy wallet address to clipboard
+  const copyWalletAddress = async (address: string) => {
+    try {
+      await navigator.clipboard.writeText(address);
+      setCopiedAddresses(prev => ({ ...prev, [address]: true }));
+      setTimeout(() => {
+        setCopiedAddresses(prev => ({ ...prev, [address]: false }));
+      }, 2000);
+    } catch (err) {
+      console.error('Failed to copy address:', err);
+    }
+  };
+
   // Format log level
   const getLogLevelIcon = (level: string) => {
     if (!level || typeof level !== 'string') {
@@ -256,14 +285,43 @@ export const Agents: React.FC = () => {
       {/* Agent List */}
       <div>
         <div className="flex justify-between items-center mb-6">
-          <h2>Your Agents ({Array.isArray(agents) ? agents.length : 0})</h2>
-          <button 
-            className="btn btn-primary"
-            onClick={() => window.location.href = '/#create'}
-          >
-            <Bot size={16} />
-            Deploy New Agent
-          </button>
+          <div className="flex items-center gap-4">
+            <h2>Your Agents ({Array.isArray(agents) ? agents.length : 0})</h2>
+            <div className="flex items-center gap-2">
+              <div 
+                className="animate-pulse" 
+                style={{ 
+                  width: '8px', 
+                  height: '8px', 
+                  borderRadius: '50%',
+                  backgroundColor: 'var(--metallic-gold)'
+                }}
+              />
+              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                Auto-refresh every 30s
+              </span>
+              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
+                Last update: {lastUpdate.toLocaleTimeString()}
+              </span>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <button 
+              className="btn btn-secondary"
+              onClick={fetchUserAgents}
+              disabled={loading}
+            >
+              <Activity size={16} />
+              Refresh
+            </button>
+            <button 
+              className="btn btn-primary"
+              onClick={() => window.location.href = '/#create'}
+            >
+              <Bot size={16} />
+              Deploy New Agent
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -419,6 +477,14 @@ export const Agents: React.FC = () => {
                               {agent.isActive ? '🟢 Active' : '🟡 Inactive'}
                             </span>
                           </div>
+                          
+                          {/* Real-time Info */}
+                          <div>
+                            <strong>Last Updated:</strong> 
+                            <span style={{ color: 'var(--text-secondary)', marginLeft: '8px', fontSize: '11px' }}>
+                              {lastUpdate.toLocaleTimeString()}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -486,7 +552,7 @@ export const Agents: React.FC = () => {
                                 <div>
                                   <div className="text-secondary" style={{ fontSize: '11px', marginBottom: '6px' }}>Top Holdings</div>
                                   <div className="space-y-2">
-                                    {mobulaApiService.getTopAssets(portfolio.assets, 4).map((asset, index) => (
+                                    {portfolio.assets.slice(0, 4).map((asset, index) => (
                                       <div key={asset.asset.id || index} className="flex justify-between items-center">
                                         <div className="flex items-center gap-2">
                                           {asset.asset.logo && (
@@ -536,11 +602,27 @@ export const Agents: React.FC = () => {
                       <div className="text-secondary mb-2" style={{ fontSize: '12px' }}>
                         Wallet Address
                       </div>
-                      <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
-                        {agent.swapConfig?.senderAddress ? 
-                          `${agent.swapConfig.senderAddress.slice(0, 6)}...${agent.swapConfig.senderAddress.slice(-4)}` : 
-                          'Not configured'
-                        }
+                      <div className="flex items-center gap-2">
+                        <div style={{ fontSize: '14px', fontFamily: 'monospace' }}>
+                          {agent.swapConfig?.senderAddress ? 
+                            `${agent.swapConfig.senderAddress.slice(0, 6)}...${agent.swapConfig.senderAddress.slice(-4)}` : 
+                            'Not configured'
+                          }
+                        </div>
+                        {agent.swapConfig?.senderAddress && (
+                          <button
+                            className="btn btn-ghost"
+                            style={{ padding: '4px' }}
+                            onClick={() => copyWalletAddress(agent.swapConfig.senderAddress)}
+                            title="Copy wallet address"
+                          >
+                            {copiedAddresses[agent.swapConfig.senderAddress] ? (
+                              <Check size={14} color="#00ff00" />
+                            ) : (
+                              <Copy size={14} />
+                            )}
+                          </button>
+                        )}
                       </div>
                     </div>
                     
