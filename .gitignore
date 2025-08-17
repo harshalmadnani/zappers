@@ -29,3 +29,6 @@ src/config/env.ts
 .env.local
 .env.development
 .env.production
+
+# Keep example files
+!src/config/env.example.ts

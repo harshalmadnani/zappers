@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Play, Pause, Settings, BarChart3, Zap, Activity, ExternalLink } from 'lucide-react';
+import { Bot, Play, Pause, Settings, BarChart3, Zap, ExternalLink } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { agentService } from '../../lib/supabase';
 import type { Agent } from '../../types/database';
@@ -105,6 +105,13 @@ export const Agents: React.FC = () => {
       <div>
         <div className="flex justify-between items-center mb-6">
           <h2>Your Agents ({agents.length})</h2>
+          <button 
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/#create'}
+          >
+            <Bot size={16} />
+            Deploy New Agent
+          </button>
         </div>
 
         {loading ? (
@@ -207,20 +214,49 @@ export const Agents: React.FC = () => {
                             try {
                               const config = JSON.parse(agent.agent_configuration);
                               return (
-                                <div className="grid gap-2">
+                                <div className="grid gap-3">
+                                  {/* Handle both old and new configuration formats */}
+                                  {config.prompt && (
+                                    <div>
+                                      <strong>AI Prompt:</strong> 
+                                      <div style={{ marginTop: '4px', color: 'var(--text-primary)' }}>
+                                        {config.prompt}
+                                      </div>
+                                    </div>
+                                  )}
                                   {config.description && (
                                     <div><strong>Description:</strong> {config.description}</div>
                                   )}
-                                  {config.network && (
+                                  {config.swapConfig && (
+                                    <div>
+                                      <strong>Trading Configuration:</strong>
+                                      <div className="grid grid-2 gap-2 mt-2">
+                                        <div>🔄 {config.swapConfig.originSymbol} → {config.swapConfig.destinationSymbol}</div>
+                                        <div>💰 Amount: {config.swapConfig.amount}</div>
+                                        <div>🌐 Network: {config.swapConfig.originBlockchain}</div>
+                                        <div>🧪 Mode: {config.swapConfig.isTest ? 'Test' : 'Live'}</div>
+                                      </div>
+                                    </div>
+                                  )}
+                                  {config.network && !config.swapConfig && (
                                     <div><strong>Network:</strong> {config.network}</div>
                                   )}
-                                  {config.strategy && (
+                                  {config.strategy && !config.swapConfig && (
                                     <div><strong>Strategy:</strong> {config.strategy}</div>
+                                  )}
+                                  {config.isActive !== undefined && (
+                                    <div>
+                                      <strong>Status:</strong> 
+                                      <span style={{ color: config.isActive ? '#00ff00' : '#ffa500', marginLeft: '8px' }}>
+                                        {config.isActive ? '🟢 Active' : '🟡 Inactive'}
+                                      </span>
+                                    </div>
                                   )}
                                 </div>
                               );
                             } catch {
-                              return <div>{agent.agent_configuration.slice(0, 200)}...</div>;
+                              const configStr = agent.agent_configuration || '';
+                              return <div>{configStr.slice(0, 200)}...</div>;
                             }
                           })()}
                         </div>

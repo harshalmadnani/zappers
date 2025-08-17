@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { usePrivy } from '@privy-io/react-auth';
 import { Search, Bot, Plus, LogIn, LogOut, Menu, X } from 'lucide-react';
 

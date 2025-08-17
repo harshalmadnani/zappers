@@ -72,7 +72,10 @@ export const Explore: React.FC = () => {
       <div>
         <div className="flex justify-between items-center mb-6">
           <h2>Available Agents ({filteredAgents.length})</h2>
-          <button className="btn btn-primary">
+          <button 
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/#create'}
+          >
             <Bot size={16} />
             Deploy New Agent
           </button>
@@ -133,25 +136,73 @@ export const Explore: React.FC = () => {
                     </div>
                   </div>
                   {agent.agent_configuration && (
-                    <p className="card-description">
+                    <div className="card-description">
                       {(() => {
+                        const configStr = agent.agent_configuration;
+                        if (!configStr) return 'No configuration available';
+                        
                         try {
-                          const config = JSON.parse(agent.agent_configuration);
-                          return config.description || 'No description available';
+                          const config = JSON.parse(configStr);
+                          // Handle both old and new configuration formats
+                          if (config.prompt) {
+                            return (
+                              <div>
+                                <p style={{ marginBottom: '8px' }}>{config.prompt}</p>
+                                {config.swapConfig && (
+                                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    <span>🔄 {config.swapConfig.originSymbol} → {config.swapConfig.destinationSymbol}</span>
+                                    <span style={{ marginLeft: '12px' }}>💰 {config.swapConfig.amount}</span>
+                                    <span style={{ marginLeft: '12px' }}>🌐 {config.swapConfig.originBlockchain}</span>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          } else if (config.description) {
+                            return config.description;
+                          } else {
+                            return 'No description available';
+                          }
                         } catch {
-                          return agent.agent_configuration.slice(0, 100) + '...';
+                          return configStr.slice(0, 100) + '...';
                         }
                       })()}
-                    </p>
+                    </div>
                   )}
                 </div>
                 
                 <div className="flex justify-between items-center">
-                  <div className="flex items-center gap-2">
-                    <Bot size={16} color="var(--metallic-gold)" />
-                    <span className="text-secondary" style={{ fontSize: '14px' }}>
-                      {agent.public_key ? 'Active' : 'Inactive'}
-                    </span>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Bot size={16} color="var(--metallic-gold)" />
+                      <span className="text-secondary" style={{ fontSize: '14px' }}>
+                        {(() => {
+                          if (!agent.agent_configuration) return agent.public_key ? 'Active' : 'Inactive';
+                          
+                          try {
+                            const config = JSON.parse(agent.agent_configuration);
+                            if (config.isActive !== undefined) {
+                              return config.isActive ? 'Active' : 'Inactive';
+                            }
+                          } catch {}
+                          return agent.public_key ? 'Active' : 'Inactive';
+                        })()}
+                      </span>
+                    </div>
+                    {(() => {
+                      if (!agent.agent_configuration) return null;
+                      
+                      try {
+                        const config = JSON.parse(agent.agent_configuration);
+                        if (config.swapConfig && config.swapConfig.isTest !== undefined) {
+                          return (
+                            <span style={{ fontSize: '12px', color: config.swapConfig.isTest ? '#ffa500' : '#00ff00' }}>
+                              {config.swapConfig.isTest ? '🧪 Test Mode' : '🚀 Live Mode'}
+                            </span>
+                          );
+                        }
+                      } catch {}
+                      return null;
+                    })()}
                   </div>
                   <div className="flex gap-2">
                     {agent.agent_deployed_link && (
