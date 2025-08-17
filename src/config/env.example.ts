@@ -1,19 +1,20 @@
 // Environment configuration template
-// Copy this file to env.ts and fill in your actual values
+// Copy this file to .env and fill in your actual values
+// NEVER commit the actual .env file with real secrets
 
 export const config = {
   privy: {
-    appId: 'YOUR_PRIVY_APP_ID',
-    clientId: 'YOUR_PRIVY_CLIENT_ID',
+    appId: 'YOUR_PRIVY_APP_ID_HERE',
+    clientId: 'YOUR_PRIVY_CLIENT_ID_HERE',
   },
   supabase: {
-    url: 'YOUR_SUPABASE_URL',
-    anonKey: 'YOUR_SUPABASE_ANON_KEY',
-    serviceRoleKey: 'YOUR_SUPABASE_SERVICE_ROLE_KEY',
+    url: 'YOUR_SUPABASE_URL_HERE',
+    anonKey: 'YOUR_SUPABASE_ANON_KEY_HERE',
+    serviceRoleKey: 'YOUR_SUPABASE_SERVICE_ROLE_KEY_HERE',
   },
   theGraph: {
     apiUrl: 'https://token-api.thegraph.com',
-    apiKey: 'YOUR_THEGRAPH_API_KEY',
+    apiKey: 'YOUR_THEGRAPH_API_KEY_HERE',
   },
   chains: {
     supported: [

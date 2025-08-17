@@ -24,7 +24,6 @@ dist-ssr
 *.sw?
 
 # Environment and configuration files
-src/config/env.ts
 .env
 .env.local
 .env.development
@@ -32,3 +31,6 @@ src/config/env.ts
 
 # Keep example files
 !src/config/env.example.ts
+
+# Note: env.ts is now safe to commit (reads from .env)
+# .env files contain the actual secrets and are gitignored
