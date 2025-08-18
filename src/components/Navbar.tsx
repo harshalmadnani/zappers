@@ -32,21 +32,19 @@ export const Navbar: React.FC<NavbarProps> = ({ activeSection, onSectionChange }
         {/* Logo */}
         <div className="navbar-logo">
           <img 
-            src="/zapper.png" 
-            alt="Zappers" 
+            src="/xade.png" 
+            alt="Xade" 
             style={{ 
-              width: '32px', 
-              height: '32px', 
-              marginRight: '12px',
-              borderRadius: '8px'
+              width: '88px', 
+              height: '26px', 
+              marginRight: '12px'
             }} 
             onError={(e) => {
               // Fallback if image doesn't exist
               e.currentTarget.style.display = 'none';
-              e.currentTarget.nextElementSibling!.textContent = '⚡ Zappers';
+              e.currentTarget.nextElementSibling!.textContent = '⚡ Xade';
             }}
           />
-          <span>Zappers</span>
         </div>
         
         {/* Desktop Navigation */}

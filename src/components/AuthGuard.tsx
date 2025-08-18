@@ -18,7 +18,7 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
             <Zap size={48} color="var(--metallic-gold)" />
           </div>
           <div className="metallic-text" style={{ fontSize: '18px' }}>
-            Loading Zappers...
+            Loading Xade...
           </div>
         </div>
       </div>
@@ -33,13 +33,12 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
           {/* Logo */}
           <div className="mb-8">
             <img 
-              src="/zapper.png" 
-              alt="Zappers" 
+              src="/xade.png" 
+              alt="Xade" 
               style={{ 
-                width: '80px', 
-                height: '80px', 
-                margin: '0 auto 16px',
-                borderRadius: '16px',
+                width: '176px', 
+                height: '53px', 
+                margin: '40px auto 40px',
                 display: 'block'
               }} 
               onError={(e) => {
@@ -47,10 +46,16 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                 e.currentTarget.style.display = 'none';
               }}
             />
-            <h1 className="metallic-text" style={{ fontSize: '48px', marginBottom: '16px' }}>
-              Zappers
-            </h1>
-            <p className="text-secondary" style={{ fontSize: '18px', lineHeight: '1.6' }}>
+            <p className="text-secondary" style={{ 
+              fontSize: '20px', 
+              lineHeight: '1.6',
+              marginBottom: '32px',
+              maxWidth: '600px',
+              marginLeft: 'auto',
+              marginRight: 'auto',
+              textAlign: 'center',
+              fontWeight: '400'
+            }}>
               Deploy powerful AI agents to automate your crypto operations and maximize returns across multiple chains.
             </p>
           </div>
@@ -63,9 +68,9 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
                   <Zap size={24} color="var(--bg-primary)" />
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Multi-Chain Support</h3>
+                  <h3 style={{ fontSize: '16px', marginBottom: '4px' }}>Native Camp Support</h3>
                   <p className="text-secondary" style={{ fontSize: '14px' }}>
-                    Ethereum, Polygon, Arbitrum, Base, Optimism & more
+                    Made exclusively for Camp, automate your trading strategies on Camp
                   </p>
                 </div>
               </div>
@@ -144,3 +149,4 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children }) => {
   // Render children if authenticated
   return <>{children}</>;
 };
+

@@ -76,6 +76,7 @@ export const CHAIN_IDS = {
   SOLANA: 792703809,
   ANCIENT8: 888888888,
   RARI: 1380012617,
+  BASECAMP: 123420001114,
 } as const;
 
 // Network configurations with display names and API names
@@ -111,6 +112,16 @@ export const NETWORKS = {
   RARI: { name: 'RARI', symbol: 'ETH', chainId: CHAIN_IDS.RARI, apiName: 'rari' },
   KATANA: { name: 'Katana', symbol: 'ETH', chainId: CHAIN_IDS.KATANA, apiName: 'katana' },
   ZIRCUIT: { name: 'Zircuit', symbol: 'ETH', chainId: CHAIN_IDS.ZIRCUIT, apiName: 'zircuit' },
+  BASECAMP: { 
+    name: 'Basecamp', 
+    symbol: 'CAMP', 
+    chainId: CHAIN_IDS.BASECAMP, 
+    apiName: 'basecamp',
+    rpcUrl: 'https://rpc.basecamp.t.raas.gelato.cloud',
+    rpcUrlAlt: 'https://rpc-campnetwork.xyz',
+    explorerUrl: 'https://basecamp.cloud.blockscout.com/',
+    nativeCurrency: { name: 'CAMP', symbol: 'CAMP', decimals: 18 }
+  },
 } as const;
 
 // Comprehensive token addresses for all supported chains
@@ -324,6 +335,11 @@ export const TOKEN_ADDRESSES = {
     WETH: '0xf037540e51d71b2d2b1120e8432ba49f29edfbd0',
     RARI: '0xcf78572a8fe97b2b9a4b9709f6a7d9a863c1b8e0',
   },
+  [CHAIN_IDS.BASECAMP]: {
+    CAMP: '0x0000000000000000000000000000000000000000',
+    USDC: '0x0000000000000000000000000000000000000000', // Placeholder - will need actual address
+    WETH: '0x0000000000000000000000000000000000000000', // Placeholder - will need actual address
+  },
 } as const;
 
 // Helper function to get available tokens for a specific chain
@@ -340,6 +356,7 @@ export function getTokenAddress(chainId: number, symbol: string): string | undef
 
 // Popular networks for quick access
 export const POPULAR_NETWORKS = [
+  'BASECAMP',
   'ARBITRUM',
   'BASE',
   'ETHEREUM',
@@ -349,3 +366,4 @@ export const POPULAR_NETWORKS = [
   'AVALANCHE',
   'FLOW_EVM',
 ] as const;
+

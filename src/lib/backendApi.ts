@@ -1,4 +1,4 @@
-const API_BASE_URL = 'https://zappers-backend.onrender.com';
+const API_BASE_URL = 'https://camp-ai.onrender.com';
 
 export interface BotConfig {
   senderAddress: string;
@@ -29,8 +29,12 @@ export interface Bot {
   swapConfig: BotConfig;
   isActive: boolean;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
   userWallet: string;
+  testResult?: any;
+  deployedAt?: string | null;
+  activatedAt?: string | null;
+  deactivatedAt?: string | null;
 }
 
 export interface BotLog {
@@ -97,8 +101,14 @@ class BackendApiService {
 
   // Get bots by user wallet
   async getBotsByUserWallet(userWallet: string): Promise<Bot[]> {
-    const response = await this.makeRequest<{data: Bot[], success: boolean, message: string}>(`/api/bots/user/${userWallet}`);
-    return response.data || [];
+    try {
+      // Since Camp AI API doesn't have a user endpoint, we get all bots and filter
+      const allBots = await this.getAllBots();
+      return allBots.filter(bot => bot.userWallet === userWallet);
+    } catch (err) {
+      console.error('Error getting bots by user wallet:', err);
+      throw err;
+    }
   }
 
   // Get active bots only

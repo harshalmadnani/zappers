@@ -119,7 +119,7 @@ export const Explore: React.FC = () => {
         return <AlertCircle size={14} color="#ff4444" />;
       case 'warn':
       case 'warning':
-        return <AlertCircle size={14} color="#ffa500" />;
+        return <AlertCircle size={14} color="#ED762F" />;
       case 'success':
         return <CheckCircle size={14} color="#00ff00" />;
       case 'info':
@@ -187,23 +187,25 @@ export const Explore: React.FC = () => {
               </span>
             </div>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-4">
             <button 
               className="btn btn-secondary"
+              style={{ padding: '8px 16px', fontSize: '14px' }}
               onClick={() => {
                 setLoading(true);
                 fetchAgents();
               }}
               disabled={loading}
             >
-              <Activity size={16} />
+              <Activity size={14} />
               Refresh
             </button>
             <button 
               className="btn btn-primary"
+              style={{ padding: '8px 16px', fontSize: '14px' }}
               onClick={() => window.location.href = '/#create'}
             >
-              <Bot size={16} />
+              <Bot size={14} />
               Deploy New Agent
             </button>
           </div>
@@ -412,11 +414,11 @@ export const Explore: React.FC = () => {
                       </button>
                       <button 
                         className="btn btn-ghost"
-                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                        style={{ padding: '4px 8px', fontSize: '11px' }}
                         onClick={() => walletAddress && fetchPortfolio(walletAddress)}
                         disabled={isLoadingPortfolio}
                       >
-                        <Wallet size={14} />
+                        <Wallet size={12} />
                         Refresh
                       </button>
                     </div>
@@ -538,7 +540,7 @@ export const Explore: React.FC = () => {
                             style={{ 
                               color: !log.level ? 'var(--text-primary)' :
                                      log.level.toLowerCase() === 'error' ? '#ff4444' : 
-                                     log.level.toLowerCase() === 'warn' ? '#ffa500' :
+                                     log.level.toLowerCase() === 'warn' ? '#ED762F' :
                                      log.level.toLowerCase() === 'success' ? '#00ff00' : 'var(--text-primary)',
                               fontWeight: '500',
                               textTransform: 'uppercase',

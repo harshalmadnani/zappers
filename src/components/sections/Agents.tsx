@@ -225,7 +225,7 @@ export const Agents: React.FC = () => {
         return <AlertCircle size={14} color="#ff4444" />;
       case 'warn':
       case 'warning':
-        return <AlertCircle size={14} color="#ffa500" />;
+        return <AlertCircle size={14} color="#ED762F" />;
       case 'success':
         return <CheckCircle size={14} color="#00ff00" />;
       case 'info':
@@ -473,7 +473,7 @@ export const Agents: React.FC = () => {
                           {/* Status */}
                           <div>
                             <strong>Status:</strong> 
-                            <span style={{ color: agent.isActive ? '#00ff00' : '#ffa500', marginLeft: '8px' }}>
+                            <span style={{ color: agent.isActive ? '#00ff00' : '#ED762F', marginLeft: '8px' }}>
                               {agent.isActive ? '🟢 Active' : '🟡 Inactive'}
                             </span>
                           </div>
@@ -762,7 +762,7 @@ export const Agents: React.FC = () => {
                             style={{ 
                               color: !log.level ? 'var(--text-primary)' :
                                      log.level.toLowerCase() === 'error' ? '#ff4444' : 
-                                     log.level.toLowerCase() === 'warn' ? '#ffa500' :
+                                     log.level.toLowerCase() === 'warn' ? '#ED762F' :
                                      log.level.toLowerCase() === 'success' ? '#00ff00' : 'var(--text-primary)',
                               fontWeight: '500',
                               textTransform: 'uppercase',

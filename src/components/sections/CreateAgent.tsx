@@ -22,13 +22,13 @@ export const CreateAgent: React.FC = () => {
   const [agentConfig, setAgentConfig] = useState({
     name: '',
     description: '',
-    network: 'ARBITRUM',
-    destinationNetwork: 'ARBITRUM',
+    network: 'BASECAMP',
+    destinationNetwork: 'BASECAMP',
     strategy: 'DCA',
     customStrategy: '',
     customPrompt: '',
-    originSymbol: 'USDC',
-    destinationSymbol: 'ETH',
+    originSymbol: 'CAMP',
+    destinationSymbol: 'USDC',
     amount: '',
     interval: '60', // minutes
     slippageTolerance: '10', // percentage as string
@@ -37,129 +37,25 @@ export const CreateAgent: React.FC = () => {
 
   // Get available tokens for the selected network
   const availableTokens = useMemo(() => {
-    const selectedNetwork = NETWORKS[agentConfig.network as keyof typeof NETWORKS];
-    if (!selectedNetwork) return [];
-    return getTokensForChain(selectedNetwork.chainId);
-  }, [agentConfig.network]);
+    // Camp network tokens
+    return ['CAMP', 'USDC', 'T12ETH', 'WCAMP', 'WETH', 'SUMMIT', 'USDT'];
+  }, []);
 
   // Example templates for quick setup
   const exampleTemplates = [
     {
-      id: 'simple-katana',
-      name: '🚀 Simple Katana Bot',
-      description: 'Katana USDC → ETH swap',
-      icon: '⚡',
-      config: {
-        name: 'Simple Katana USDC-ETH Bot',
-        description: 'Simple bot that swaps USDC for ETH on Katana',
-        network: 'KATANA',
-        destinationNetwork: 'KATANA',
-        customPrompt: 'Simple bot that swaps 2 USDC for ETH on Katana every time the price is favorable',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
-        amount: '2',
-        strategy: 'DCA',
-        interval: '60',
-        slippageTolerance: '10',
-        isTest: true
-      }
-    },
-    {
-      id: 'cross-chain',
-      name: '🌉 Cross-Chain Bot',
-      description: 'Arbitrum → Base bridge trading',
-      icon: '🔗',
-      config: {
-        name: 'Cross-Chain ARB-BASE Bot',
-        description: 'Cross-chain bot that optimizes trades between Arbitrum and Base',
-        network: 'ARBITRUM',
-        destinationNetwork: 'BASE',
-        customPrompt: 'Cross-chain bot that swaps USDC from Arbitrum to ETH on Base when arbitrage opportunities arise. Monitor both chains for best prices.',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
-        amount: '5',
-        strategy: 'ARBITRAGE',
-        interval: '30',
-        slippageTolerance: '15',
-        isTest: true
-      }
-    },
-    {
-      id: 'cross-chain-katana',
-      name: '⚔️ Cross-Chain ARB → Katana',
-      description: 'Arbitrum to Katana cross-chain trading',
-      icon: '🌐',
-      config: {
-        name: 'CROSS-CHAIN-ARB-TO-KATANA-BOT',
-        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Katana',
-        network: 'ARBITRUM',
-        destinationNetwork: 'KATANA',
-        customPrompt: 'Cross-chain trading bot that swaps 5 USDC from Arbitrum to ETH on Katana - REAL CROSS-CHAIN TRADING',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
-        amount: '5',
-        strategy: 'CUSTOM',
-        customStrategy: 'cross_chain_arbitrage',
-        interval: '45',
-        slippageTolerance: '15',
-        isTest: false
-      }
-    },
-    {
-      id: 'cross-chain-zircuit',
-      name: '🔷 Cross-Chain ARB → Zircuit',
-      description: 'Arbitrum to Zircuit L2 trading',
-      icon: '⚡',
-      config: {
-        name: 'CROSS-CHAIN-ARB-TO-ZIRCUIT-BOT',
-        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to ETH on Zircuit L2',
-        network: 'ARBITRUM',
-        destinationNetwork: 'ZIRCUIT',
-        customPrompt: 'Cross-chain trading bot that swaps 7 USDC from Arbitrum to ETH on Zircuit L2 - REAL CROSS-CHAIN TRADING',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
-        amount: '7',
-        strategy: 'CUSTOM',
-        customStrategy: 'cross_chain_l2_arbitrage',
-        interval: '35',
-        slippageTolerance: '12',
-        isTest: false
-      }
-    },
-    {
-      id: 'cross-chain-flow',
-      name: '🌊 Cross-Chain ARB → Flow EVM',
-      description: 'Arbitrum to Flow EVM trading',
-      icon: '💎',
-      config: {
-        name: 'CROSS-CHAIN-ARB-TO-FLOW-EVM-BOT',
-        description: 'Cross-chain trading bot that swaps USDC from Arbitrum to FLOW tokens on Flow EVM',
-        network: 'ARBITRUM',
-        destinationNetwork: 'FLOW_EVM',
-        customPrompt: 'Cross-chain trading bot that swaps 6 USDC from Arbitrum to FLOW tokens on Flow EVM - REAL CROSS-CHAIN TRADING',
-        originSymbol: 'USDC',
-        destinationSymbol: 'FLOW',
-        amount: '6',
-        strategy: 'CUSTOM',
-        customStrategy: 'cross_chain_emerging_network',
-        interval: '40',
-        slippageTolerance: '20',
-        isTest: false
-      }
-    },
-    {
-      id: 'dca-flow',
-      name: '💎 Flow DCA Bot',
-      description: 'Dollar-cost average into FLOW',
+      id: 'camp-dca',
+      name: '💎 Camp DCA Bot',
+      description: 'Dollar-cost average into CAMP',
       icon: '🌊',
       config: {
-        name: 'Flow DCA Bot',
-        description: 'DCA bot for accumulating FLOW tokens',
-        network: 'FLOW_EVM',
-        destinationNetwork: 'FLOW_EVM',
-        customPrompt: 'DCA bot that buys FLOW tokens with USDC every hour, investing 10 USDC per trade regardless of price to build a long-term position',
+        name: 'Camp DCA Bot',
+        description: 'DCA bot for accumulating CAMP tokens',
+        network: 'BASECAMP',
+        destinationNetwork: 'BASECAMP',
+        customPrompt: 'DCA bot that buys CAMP tokens with USDC every hour, investing 10 USDC per trade regardless of price to build a long-term position',
         originSymbol: 'USDC',
-        destinationSymbol: 'FLOW',
+        destinationSymbol: 'CAMP',
         amount: '10',
         strategy: 'DCA',
         interval: '60',
@@ -168,63 +64,43 @@ export const CreateAgent: React.FC = () => {
       }
     },
     {
-      id: 'momentum-base',
-      name: '📈 Momentum Trading Bot',
-      description: 'Base network momentum strategy',
-      icon: '🚀',
+      id: 'camp-liquidator',
+      name: '💧 Camp Liquidator Bot',
+      description: 'Liquidate positions on Camp network',
+      icon: '⚡',
       config: {
-        name: 'Base Momentum Bot',
-        description: 'Advanced momentum trading on Base network',
-        network: 'BASE',
-        destinationNetwork: 'BASE',
-        customPrompt: 'Advanced momentum trading bot that buys ETH when price increases 3% in 15 minutes and sells when it drops 2% or gains 5%. Use 50 USDC per trade with tight risk management.',
+        name: 'Camp Liquidator Bot',
+        description: 'Liquidation bot for Camp network opportunities',
+        network: 'BASECAMP',
+        destinationNetwork: 'BASECAMP',
+        customPrompt: 'Liquidation bot that monitors for liquidatable positions on Camp network. Execute liquidations when profitable opportunities arise. Use 50 USDC per liquidation with tight risk management.',
         originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
+        destinationSymbol: 'CAMP',
         amount: '50',
-        strategy: 'MOMENTUM',
-        interval: '15',
-        slippageTolerance: '8',
+        strategy: 'CUSTOM',
+        customStrategy: 'liquidation_strategy',
+        interval: '5',
+        slippageTolerance: '3',
         isTest: true
       }
     },
     {
-      id: 'range-polygon',
-      name: '📊 Range Trading Bot',
-      description: 'Polygon range trading strategy',
-      icon: '📐',
+      id: 'eth-range-trading',
+      name: '📊 ETH Range Trading Bot',
+      description: 'Range trading for ETH on Camp',
+      icon: '🎯',
       config: {
-        name: 'Polygon Range Bot',
-        description: 'Range trading bot for sideways markets',
-        network: 'POLYGON',
-        destinationNetwork: 'POLYGON',
-        customPrompt: 'Range trading bot that buys POL when price drops to support level around $0.40 and sells at resistance around $0.50. Use 100 USDC per trade.',
+        name: 'ETH Range Trading Bot',
+        description: 'Range trading bot that buys ETH when price is above $4500 and sells when below $4200',
+        network: 'BASECAMP',
+        destinationNetwork: 'BASECAMP',
+        customPrompt: 'Range trading bot that buys ETH when price is above $4500 and sells when price drops below $4200. Use 100 USDC per trade with tight risk management.',
         originSymbol: 'USDC',
-        destinationSymbol: 'POL',
+        destinationSymbol: 'WETH',
         amount: '100',
         strategy: 'RANGE',
-        interval: '120',
-        slippageTolerance: '10',
-        isTest: true
-      }
-    },
-    {
-      id: 'custom-advanced',
-      name: '🧠 Custom AI Strategy',
-      description: 'Let AI decide everything',
-      icon: '🤖',
-      config: {
-        name: 'AI-Powered Custom Bot',
-        description: 'Fully AI-driven trading strategy',
-        network: 'ARBITRUM',
-        destinationNetwork: 'ARBITRUM',
-        customPrompt: 'You are an advanced AI trading bot. Analyze market conditions, choose the best tokens, amounts, and timing for profitable trades. Be conservative but opportunistic. Start with small amounts and scale up successful strategies.',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
-        amount: '25',
-        strategy: 'CUSTOM',
-        customStrategy: 'AI-driven adaptive strategy based on market analysis',
-        interval: '45',
-        slippageTolerance: '12',
+        interval: '15',
+        slippageTolerance: '8',
         isTest: true
       }
     }
@@ -251,7 +127,7 @@ export const CreateAgent: React.FC = () => {
         mnemonic: newWallet.mnemonic?.phrase || 'Generated from private key'
       });
       setError('');
-      setSuccess('New EVM wallet generated successfully! This wallet works across all EVM chains including Flow EVM.');
+      setSuccess('New EVM wallet generated successfully! This wallet works on Camp network.');
     } catch (err) {
       setError('Failed to generate wallet: ' + (err as Error).message);
     } finally {
@@ -328,6 +204,7 @@ export const CreateAgent: React.FC = () => {
     
     try {
       const selectedNetwork = NETWORKS[agentConfig.network as keyof typeof NETWORKS];
+      const destinationNetwork = NETWORKS[agentConfig.destinationNetwork as keyof typeof NETWORKS] || selectedNetwork;
       
       const botData = {
         name: agentConfig.name,
@@ -341,20 +218,7 @@ export const CreateAgent: React.FC = () => {
           destinationSymbol: agentConfig.destinationSymbol,
           amount: agentConfig.amount,
           originBlockchain: selectedNetwork.apiName,
-          destinationBlockchain: (() => {
-            // Use the explicitly selected destination network if available
-            if (agentConfig.destinationNetwork && agentConfig.destinationNetwork !== agentConfig.network) {
-              const destNetwork = NETWORKS[agentConfig.destinationNetwork as keyof typeof NETWORKS];
-              return destNetwork ? destNetwork.apiName : selectedNetwork.apiName;
-            }
-            // Fallback to strategy-based detection for backward compatibility
-            if (agentConfig.strategy === 'CUSTOM' && agentConfig.customStrategy?.includes('cross_chain')) {
-              if (agentConfig.customStrategy.includes('katana')) return 'katana';
-              if (agentConfig.customStrategy.includes('zircuit')) return 'zircuit';
-              if (agentConfig.customStrategy.includes('flow') || agentConfig.customStrategy.includes('emerging_network')) return 'flow-evm';
-            }
-            return selectedNetwork.apiName; // Same network for regular bots
-          })(),
+          destinationBlockchain: destinationNetwork.apiName,
           slippageTolerance: agentConfig.slippageTolerance,
           // Add cross-chain specific fields if this is a custom strategy
           ...(agentConfig.strategy === 'CUSTOM' && agentConfig.customStrategy?.includes('cross_chain') && {
@@ -373,13 +237,13 @@ export const CreateAgent: React.FC = () => {
       setAgentConfig({
         name: '',
         description: '',
-        network: 'ARBITRUM',
-        destinationNetwork: 'ARBITRUM',
+        network: 'BASECAMP',
+        destinationNetwork: 'BASECAMP',
         strategy: 'DCA',
         customStrategy: '',
         customPrompt: '',
-        originSymbol: 'USDC',
-        destinationSymbol: 'ETH',
+        originSymbol: 'CAMP',
+        destinationSymbol: 'USDC',
         amount: '',
         interval: '60',
         slippageTolerance: '10',
@@ -397,7 +261,7 @@ export const CreateAgent: React.FC = () => {
       <div className="text-center mb-8">
         <h2 className="metallic-text mb-4">🔐 Step 1: Generate EVM Wallet</h2>
         <p className="text-secondary">
-          Create a new EVM wallet that works across all supported networks including Flow EVM, 
+          Create a new EVM wallet that works on Camp network, 
           or import an existing one.
         </p>
       </div>
@@ -532,24 +396,19 @@ export const CreateAgent: React.FC = () => {
               <h4 className="mb-4">🌐 Supported Networks</h4>
               <div style={{ maxHeight: '200px', overflowY: 'auto' }}>
                 <div className="grid gap-2">
-                  {POPULAR_NETWORKS.map((networkKey) => {
-                    const network = NETWORKS[networkKey];
-                    return (
-                      <div key={networkKey} className="flex items-center gap-3">
-                        <div 
-                          style={{ 
-                            width: '8px', 
-                            height: '8px', 
-                            borderRadius: '50%',
-                            backgroundColor: 'var(--metallic-gold)'
-                          }}
-                        />
-                        <span style={{ fontSize: '14px' }}>
-                          {network.name} ({network.symbol})
-                        </span>
-                      </div>
-                    );
-                  })}
+                  <div className="flex items-center gap-3">
+                    <div 
+                      style={{ 
+                        width: '8px', 
+                        height: '8px', 
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--metallic-gold)'
+                      }}
+                    />
+                    <span style={{ fontSize: '14px' }}>
+                      Camp Network (CAMP)
+                    </span>
+                  </div>
                   <div style={{ 
                     fontSize: '12px', 
                     color: 'var(--text-secondary)', 
@@ -557,7 +416,7 @@ export const CreateAgent: React.FC = () => {
                     paddingTop: '8px',
                     borderTop: '1px solid var(--glass-border-dark)'
                   }}>
-                    + {Object.keys(NETWORKS).length - POPULAR_NETWORKS.length} more networks available
+                    Camp AI API powered trading
                   </div>
                 </div>
               </div>
@@ -644,10 +503,10 @@ export const CreateAgent: React.FC = () => {
       <div className="text-center">
         <div className="glass-dark rounded-lg p-4" style={{ display: 'inline-block' }}>
           <p className="text-secondary" style={{ fontSize: '14px', marginBottom: '8px' }}>
-            💡 <strong>Templates are pre-configured for testing</strong>
+            💡 <strong>Templates are pre-configured for Camp network</strong>
           </p>
           <p className="text-secondary" style={{ fontSize: '12px' }}>
-            All templates start in test mode. You can modify any settings after applying a template.
+            All templates are optimized for Camp AI API and start in test mode. You can modify any settings after applying a template.
           </p>
         </div>
       </div>
@@ -674,7 +533,7 @@ export const CreateAgent: React.FC = () => {
                 type="text"
                 value={agentConfig.name}
                 onChange={(e) => setAgentConfig({...agentConfig, name: e.target.value})}
-                placeholder="e.g., Flow DCA Bot"
+                placeholder="e.g., Camp DCA Bot"
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -689,21 +548,11 @@ export const CreateAgent: React.FC = () => {
 
             <div>
               <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
-                🌐 Source Blockchain *
+                💱 From Token *
               </label>
               <select
-                value={agentConfig.network}
-                onChange={(e) => {
-                  const newNetwork = e.target.value;
-                  const newTokens = getTokensForChain(NETWORKS[newNetwork as keyof typeof NETWORKS].chainId);
-                  setAgentConfig({
-                    ...agentConfig, 
-                    network: newNetwork,
-                    // Reset token selection if current tokens aren't available on new network
-                    originSymbol: newTokens.includes(agentConfig.originSymbol) ? agentConfig.originSymbol : newTokens[0] || 'ETH',
-                    destinationSymbol: newTokens.includes(agentConfig.destinationSymbol) ? agentConfig.destinationSymbol : newTokens[1] || 'USDC'
-                  });
-                }}
+                value={agentConfig.originSymbol}
+                onChange={(e) => setAgentConfig({...agentConfig, originSymbol: e.target.value})}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -714,35 +563,21 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                <optgroup label="🔥 Popular Networks" style={{ background: 'var(--bg-primary)' }}>
-                  {POPULAR_NETWORKS.map((networkKey) => {
-                    const network = NETWORKS[networkKey];
-                    return (
-                      <option key={networkKey} value={networkKey} style={{ background: 'var(--bg-primary)' }}>
-                        {network.name} ({network.symbol})
-                      </option>
-                    );
-                  })}
-                </optgroup>
-                <optgroup label="🌐 All Networks" style={{ background: 'var(--bg-primary)' }}>
-                  {Object.entries(NETWORKS)
-                    .filter(([key]) => !POPULAR_NETWORKS.includes(key as any))
-                    .map(([key, network]) => (
-                      <option key={key} value={key} style={{ background: 'var(--bg-primary)' }}>
-                        {network.name} ({network.symbol})
-                      </option>
-                    ))}
-                </optgroup>
+                {availableTokens.map(token => (
+                  <option key={token} value={token} style={{ background: 'var(--bg-primary)' }}>
+                    {token}
+                  </option>
+                ))}
               </select>
             </div>
 
             <div>
               <label className="block text-secondary mb-2" style={{ fontSize: '14px' }}>
-                🎯 Destination Blockchain *
+                💰 To Token *
               </label>
               <select
-                value={agentConfig.destinationNetwork || agentConfig.network}
-                onChange={(e) => setAgentConfig({...agentConfig, destinationNetwork: e.target.value})}
+                value={agentConfig.destinationSymbol}
+                onChange={(e) => setAgentConfig({...agentConfig, destinationSymbol: e.target.value})}
                 style={{
                   width: '100%',
                   padding: '12px',
@@ -753,25 +588,11 @@ export const CreateAgent: React.FC = () => {
                   fontSize: '14px'
                 }}
               >
-                <optgroup label="🔥 Popular Networks" style={{ background: 'var(--bg-primary)' }}>
-                  {POPULAR_NETWORKS.map((networkKey) => {
-                    const network = NETWORKS[networkKey];
-                    return (
-                      <option key={networkKey} value={networkKey} style={{ background: 'var(--bg-primary)' }}>
-                        {network.name} ({network.symbol})
-                      </option>
-                    );
-                  })}
-                </optgroup>
-                <optgroup label="🌐 All Networks" style={{ background: 'var(--bg-primary)' }}>
-                  {Object.entries(NETWORKS)
-                    .filter(([key]) => !POPULAR_NETWORKS.includes(key as any))
-                    .map(([key, network]) => (
-                      <option key={key} value={key} style={{ background: 'var(--bg-primary)' }}>
-                        {network.name} ({network.symbol})
-                      </option>
-                    ))}
-                </optgroup>
+                {availableTokens.map(token => (
+                  <option key={token} value={token} style={{ background: 'var(--bg-primary)' }}>
+                    {token}
+                  </option>
+                ))}
               </select>
             </div>
           </div>
@@ -819,19 +640,19 @@ export const CreateAgent: React.FC = () => {
               }}
             />
             <p className="text-secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
-              💡 Example: "Buy FLOW tokens with USDC every hour when the price drops below $0.50, using 100 USDC per trade. Use DCA strategy with 5% price drop intervals."
+              💡 Example: "Buy CAMP tokens with USDC every hour when the price drops below $0.50, using 100 USDC per trade. Use DCA strategy with 5% price drop intervals."
             </p>
           </div>
 
           <div className="mb-4 p-4 glass-dark rounded-lg">
             <p className="text-secondary" style={{ fontSize: '14px', marginBottom: '8px' }}>
-              🤖 <strong>AI-Powered Trading:</strong> The AI will intelligently determine the best tokens, amounts, and strategies based on your custom prompt above.
+              🤖 <strong>Camp AI-Powered Trading:</strong> The Camp AI will intelligently determine the best tokens, amounts, and strategies based on your custom prompt above.
             </p>
             <p className="text-secondary" style={{ fontSize: '12px', marginBottom: '8px' }}>
-              💡 You can leave these fields as defaults, or override them if you have specific preferences. The AI will use your custom prompt as the primary instruction.
+              💡 You can leave these fields as defaults, or override them if you have specific preferences. The Camp AI will use your custom prompt as the primary instruction.
             </p>
             <div style={{ fontSize: '12px', color: 'var(--metallic-gold)' }}>
-              🪙 <strong>Available tokens on {NETWORKS[agentConfig.network as keyof typeof NETWORKS]?.name}:</strong> {availableTokens.join(', ')}
+              🪙 <strong>Available tokens on Camp network:</strong> {availableTokens.join(', ')}
             </div>
           </div>
 
@@ -1049,12 +870,8 @@ export const CreateAgent: React.FC = () => {
             <span>{agentConfig.name}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-secondary">Source Blockchain:</span>
-            <span>{NETWORKS[agentConfig.network as keyof typeof NETWORKS]?.name}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-secondary">Destination Blockchain:</span>
-            <span>{NETWORKS[agentConfig.destinationNetwork as keyof typeof NETWORKS]?.name}</span>
+            <span className="text-secondary">Network:</span>
+            <span>Camp Network</span>
           </div>
           <div className="flex justify-between">
             <span className="text-secondary">Trading Pair:</span>
@@ -1103,7 +920,7 @@ export const CreateAgent: React.FC = () => {
       <div className="text-center mb-8">
         <h1 className="metallic-text mb-4">Create New Agent</h1>
         <p className="text-secondary" style={{ fontSize: '18px', maxWidth: '600px', margin: '0 auto' }}>
-          Create a powerful AI trading agent with multi-chain EVM wallet support including Flow EVM.
+          Create a powerful AI trading agent with Camp AI API integration for the Camp ecosystem.
         </p>
       </div>
 
@@ -1117,7 +934,7 @@ export const CreateAgent: React.FC = () => {
       )}
 
       {success && (
-        <div className="card mb-6" style={{ backgroundColor: 'rgba(212, 175, 55, 0.1)', borderColor: 'var(--metallic-gold)' }}>
+        <div className="card mb-6" style={{ backgroundColor: 'rgba(237, 118, 47, 0.1)', borderColor: 'var(--metallic-gold)' }}>
           <div className="flex items-center gap-3">
             <div style={{ color: 'var(--metallic-gold)', fontSize: '18px' }}>✅</div>
             <div style={{ color: 'var(--metallic-gold)' }}>{success}</div>

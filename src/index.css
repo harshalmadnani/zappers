@@ -14,9 +14,9 @@
   --text-muted: #888888;
   
   /* Metallic colors */
-  --metallic-gold: #D4AF37;
-  --metallic-gold-light: #FFD700;
-  --metallic-gold-dark: #B8860B;
+  --metallic-gold: #ED762F;
+  --metallic-gold-light: #F08A4A;
+  --metallic-gold-dark: #D65A1A;
   --metallic-silver: #C0C0C0;
   --metallic-bronze: #CD7F32;
   
@@ -30,7 +30,7 @@
   --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.1);
   --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.3);
   --shadow-heavy: 0 16px 64px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 20px rgba(212, 175, 55, 0.3);
+  --shadow-glow: 0 0 20px rgba(237, 118, 47, 0.3);
   
   /* Transitions */
   --transition-fast: 0.2s ease;
@@ -142,7 +142,7 @@ h3 {
 
 .btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 0 30px rgba(212, 175, 55, 0.5);
+  box-shadow: 0 0 30px rgba(237, 118, 47, 0.5);
 }
 
 .btn-secondary {
@@ -273,7 +273,7 @@ h3 {
   color: var(--metallic-gold);
   background: var(--glass-bg);
   border: 1px solid var(--metallic-gold);
-  box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+  box-shadow: 0 0 15px rgba(237, 118, 47, 0.3);
   transform: translateY(-2px);
 }
 
