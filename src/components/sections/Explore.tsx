@@ -1,15 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Bot, Wallet, Activity, Clock, Eye, X, CheckCircle, AlertCircle } from 'lucide-react';
+import { Search, Bot, Activity, Clock, Eye, X, CheckCircle, AlertCircle } from 'lucide-react';
 import { backendApiService, type Bot as BackendBot, type BotLog } from '../../lib/backendApi';
-import { mobulaApiService, type WalletPortfolio } from '../../lib/mobulaApi';
 
 export const Explore: React.FC = () => {
   const [agents, setAgents] = useState<BackendBot[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [portfolios, setPortfolios] = useState<Record<string, WalletPortfolio>>({});
-  const [portfolioLoading, setPortfolioLoading] = useState<Record<string, boolean>>({});
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [selectedBot, setSelectedBot] = useState<BackendBot | null>(null);
   const [showLogsModal, setShowLogsModal] = useState(false);
@@ -23,13 +20,6 @@ export const Explore: React.FC = () => {
       setAgents(Array.isArray(fetchedAgents) ? fetchedAgents : []);
       setError(null);
       setLastUpdate(new Date());
-      
-      // Fetch portfolios for each agent
-      fetchedAgents.forEach(agent => {
-        if (agent.swapConfig?.senderAddress) {
-          fetchPortfolio(agent.swapConfig.senderAddress);
-        }
-      });
     } catch (err) {
       console.error('Error fetching agents:', err);
       setError('Failed to load agents. Please try again later.');
@@ -52,30 +42,6 @@ export const Explore: React.FC = () => {
       clearInterval(interval);
     };
   }, []);
-
-  const fetchPortfolio = async (walletAddress: string) => {
-    if (portfolios[walletAddress] || portfolioLoading[walletAddress]) {
-      return; // Already loaded or loading
-    }
-
-    setPortfolioLoading(prev => ({ ...prev, [walletAddress]: true }));
-
-    try {
-      const portfolio = await mobulaApiService.getWalletPortfolio(walletAddress, {
-        cache: true,
-        stale: 3600, // 1 hour cache
-        filterSpam: true,
-        minliq: 100, // Minimum $100 liquidity
-        pnl: true
-      });
-      
-      setPortfolios(prev => ({ ...prev, [walletAddress]: portfolio }));
-    } catch (err) {
-      console.error(`Error fetching portfolio for ${walletAddress}:`, err);
-    } finally {
-      setPortfolioLoading(prev => ({ ...prev, [walletAddress]: false }));
-    }
-  };
 
   const filteredAgents = agents.filter(agent => 
     agent.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -167,28 +133,9 @@ export const Explore: React.FC = () => {
       {/* Available Agents */}
       <div>
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <h2>Available Agents ({filteredAgents.length})</h2>
-            <div className="flex items-center gap-2">
-              <div 
-                className="animate-pulse" 
-                style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--metallic-gold)'
-                }}
-              />
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Auto-refresh every 45s
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Last update: {lastUpdate.toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
+          <h2 className="text-2xl font-bold">Explore All Agents</h2>
           <div className="flex gap-4">
-            <button 
+            <button
               className="btn btn-secondary"
               style={{ padding: '8px 16px', fontSize: '14px' }}
               onClick={() => {
@@ -200,7 +147,7 @@ export const Explore: React.FC = () => {
               <Activity size={14} />
               Refresh
             </button>
-            <button 
+            <button
               className="btn btn-primary"
               style={{ padding: '8px 16px', fontSize: '14px' }}
               onClick={() => window.location.href = '/#create'}
@@ -247,9 +194,6 @@ export const Explore: React.FC = () => {
         ) : (
           <div className="grid grid-2">
             {filteredAgents.map((agent) => {
-              const walletAddress = agent.swapConfig?.senderAddress;
-              const portfolio = walletAddress ? portfolios[walletAddress] : null;
-              const isLoadingPortfolio = walletAddress ? portfolioLoading[walletAddress] : false;
               
               return (
                 <div key={agent.id} className="card">
@@ -280,95 +224,6 @@ export const Explore: React.FC = () => {
                           <span style={{ marginLeft: '12px' }}>💰 {agent.swapConfig?.amount}</span>
                           <span style={{ marginLeft: '12px' }}>🌐 {agent.swapConfig?.originBlockchain}</span>
                         </div>
-                      </div>
-                    )}
-                  </div>
-                  
-                  {/* Portfolio Section */}
-                  <div className="mb-4">
-                    <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--metallic-gold)' }}>
-                      💼 Wallet Portfolio
-                    </h4>
-                    {!walletAddress ? (
-                      <div className="glass-dark rounded-lg p-3">
-                        <p className="text-secondary" style={{ fontSize: '12px' }}>
-                          No wallet address available
-                        </p>
-                      </div>
-                    ) : isLoadingPortfolio ? (
-                      <div className="glass-dark rounded-lg p-3 text-center">
-                        <div className="animate-spin inline-block">⏳</div>
-                        <p className="text-secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
-                          Loading portfolio...
-                        </p>
-                      </div>
-                    ) : portfolio ? (
-                      <div className="glass-dark rounded-lg p-3">
-                        <div className="grid grid-2 gap-3 mb-3">
-                          <div>
-                            <div className="text-secondary" style={{ fontSize: '11px' }}>Total Balance</div>
-                            <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                              {mobulaApiService.formatBalance(portfolio.total_wallet_balance)}
-                            </div>
-                          </div>
-                          <div>
-                            <div className="text-secondary" style={{ fontSize: '11px' }}>24h PnL</div>
-                            <div 
-                              style={{ 
-                                fontSize: '14px', 
-                                fontWeight: '600',
-                                color: portfolio.total_pnl_history['24h'] ? 
-                                  (portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized >= 0 ? '#00ff00' : '#ff4444') : 
-                                  'var(--text-secondary)'
-                              }}
-                            >
-                              {portfolio.total_pnl_history['24h'] ? 
-                                mobulaApiService.formatPnL(portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized).value :
-                                'N/A'
-                              }
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Top Assets */}
-                        {portfolio.assets && portfolio.assets.length > 0 && (
-                          <div>
-                            <div className="text-secondary" style={{ fontSize: '11px', marginBottom: '4px' }}>Top Holdings</div>
-                            <div className="space-y-1">
-                              {mobulaApiService.getTopAssets(portfolio.assets, 3).map((asset, index) => (
-                                <div key={asset.asset.id || index} className="flex justify-between items-center">
-                                  <div className="flex items-center gap-2">
-                                    {asset.asset.logo && (
-                                      <img 
-                                        src={asset.asset.logo} 
-                                        alt={asset.asset.symbol}
-                                        style={{ width: '16px', height: '16px', borderRadius: '50%' }}
-                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                      />
-                                    )}
-                                    <span style={{ fontSize: '12px' }}>{asset.asset.symbol}</span>
-                                  </div>
-                                  <div style={{ fontSize: '12px', fontWeight: '500' }}>
-                                    {mobulaApiService.formatBalance(asset.estimated_balance)}
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="glass-dark rounded-lg p-3">
-                        <p className="text-secondary" style={{ fontSize: '12px' }}>
-                          Portfolio data unavailable
-                        </p>
-                        <button 
-                          className="btn btn-ghost mt-2" 
-                          style={{ padding: '4px 8px', fontSize: '11px' }}
-                          onClick={() => fetchPortfolio(walletAddress)}
-                        >
-                          Retry
-                        </button>
                       </div>
                     )}
                   </div>
@@ -411,15 +266,6 @@ export const Explore: React.FC = () => {
                       >
                         <Eye size={14} />
                         Logs
-                      </button>
-                      <button 
-                        className="btn btn-ghost"
-                        style={{ padding: '4px 8px', fontSize: '11px' }}
-                        onClick={() => walletAddress && fetchPortfolio(walletAddress)}
-                        disabled={isLoadingPortfolio}
-                      >
-                        <Wallet size={12} />
-                        Refresh
                       </button>
                     </div>
                   </div>

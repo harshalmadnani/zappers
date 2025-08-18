@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Bot, Play, Pause, BarChart3, Zap, Trash2, Eye, Activity, X, Clock, CheckCircle, AlertCircle, Wallet, Copy, Check } from 'lucide-react';
+import { Bot, Play, Pause, BarChart3, Zap, Trash2, Eye, Activity, X, Clock, CheckCircle, AlertCircle, Copy, Check } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { backendApiService, type Bot as BackendBot, type BotLog } from '../../lib/backendApi';
-import { combinedPortfolioService, type EnhancedWalletPortfolio } from '../../lib/combinedPortfolioService';
-import { mobulaApiService } from '../../lib/mobulaApi';
 
 export const Agents: React.FC = () => {
   const { user } = usePrivy();
@@ -14,8 +12,6 @@ export const Agents: React.FC = () => {
   const [showLogsModal, setShowLogsModal] = useState(false);
   const [botLogs, setBotLogs] = useState<BotLog[]>([]);
   const [logsLoading, setLogsLoading] = useState(false);
-  const [portfolios, setPortfolios] = useState<Record<string, EnhancedWalletPortfolio>>({});
-  const [portfolioLoading, setPortfolioLoading] = useState<Record<string, boolean>>({});
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
   const [copiedAddresses, setCopiedAddresses] = useState<Record<string, boolean>>({});
 
@@ -42,13 +38,6 @@ export const Agents: React.FC = () => {
       if (Array.isArray(userAgents)) {
         setAgents(userAgents);
         setLastUpdate(new Date());
-        
-        // Fetch portfolios for each agent
-        userAgents.forEach(agent => {
-          if (agent.swapConfig?.senderAddress) {
-            fetchPortfolio(agent.swapConfig.senderAddress);
-          }
-        });
       } else {
         console.warn('API returned non-array data:', userAgents);
         setAgents([]);
@@ -78,30 +67,6 @@ export const Agents: React.FC = () => {
       clearInterval(interval);
     };
   }, [user]);
-
-  const fetchPortfolio = async (walletAddress: string) => {
-    if (portfolios[walletAddress] || portfolioLoading[walletAddress]) {
-      return; // Already loaded or loading
-    }
-
-    setPortfolioLoading(prev => ({ ...prev, [walletAddress]: true }));
-
-    try {
-      const portfolio = await combinedPortfolioService.getEnhancedPortfolio(walletAddress, {
-        useMobula: true,
-        useTheGraph: true,
-        networks: ['mainnet', 'arbitrum-one', 'avalanche', 'base', 'bsc', 'matic', 'optimism'],
-        cache: true,
-        stale: 3600 // 1 hour cache
-      });
-      
-      setPortfolios(prev => ({ ...prev, [walletAddress]: portfolio }));
-    } catch (err) {
-      console.error(`Error fetching portfolio for ${walletAddress}:`, err);
-    } finally {
-      setPortfolioLoading(prev => ({ ...prev, [walletAddress]: false }));
-    }
-  };
 
   const getStatusColor = (agent: BackendBot) => {
     return agent.isActive ? 'var(--metallic-gold)' : 'var(--text-secondary)';
@@ -285,43 +250,14 @@ export const Agents: React.FC = () => {
       {/* Agent List */}
       <div>
         <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <h2>Your Agents ({Array.isArray(agents) ? agents.length : 0})</h2>
-            <div className="flex items-center gap-2">
-              <div 
-                className="animate-pulse" 
-                style={{ 
-                  width: '8px', 
-                  height: '8px', 
-                  borderRadius: '50%',
-                  backgroundColor: 'var(--metallic-gold)'
-                }}
-              />
-              <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                Auto-refresh every 30s
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>
-                Last update: {lastUpdate.toLocaleTimeString()}
-              </span>
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button 
-              className="btn btn-secondary"
-              onClick={fetchUserAgents}
-              disabled={loading}
-            >
-              <Activity size={16} />
-              Refresh
-            </button>
-            <button 
-              className="btn btn-primary"
-              onClick={() => window.location.href = '/#create'}
-            >
-              <Bot size={16} />
-              Deploy New Agent
-            </button>
-          </div>
+          <h2 className="text-2xl font-bold">Manage Your Agents</h2>
+          <button
+            className="btn btn-primary"
+            onClick={() => window.location.href = '/#create'}
+          >
+            <Bot size={16} />
+            Deploy New Agent
+          </button>
         </div>
 
         {loading ? (
@@ -406,15 +342,6 @@ export const Agents: React.FC = () => {
                       <button 
                         className="btn btn-ghost" 
                         style={{ padding: '8px' }}
-                        onClick={() => agent.swapConfig?.senderAddress && fetchPortfolio(agent.swapConfig.senderAddress)}
-                        title="Refresh Portfolio"
-                        disabled={!agent.swapConfig?.senderAddress || portfolioLoading[agent.swapConfig?.senderAddress || '']}
-                      >
-                        <Wallet size={16} />
-                      </button>
-                      <button 
-                        className="btn btn-ghost" 
-                        style={{ padding: '8px' }}
                         onClick={() => refreshBotStatus(agent.id)}
                         title="Refresh Status"
                       >
@@ -489,112 +416,6 @@ export const Agents: React.FC = () => {
                       </div>
                     </div>
                   </div>
-
-                  {/* Portfolio Section */}
-                  {(() => {
-                    const walletAddress = agent.swapConfig?.senderAddress;
-                    const portfolio = walletAddress ? portfolios[walletAddress] : null;
-                    const isLoadingPortfolio = walletAddress ? portfolioLoading[walletAddress] : false;
-
-                    return (
-                      <div className="mb-4">
-                        <div className="glass-dark rounded-lg p-4">
-                          <h4 style={{ fontSize: '14px', marginBottom: '8px', color: 'var(--metallic-gold)' }}>
-                            💼 Wallet Portfolio
-                          </h4>
-                          {!walletAddress ? (
-                            <p className="text-secondary" style={{ fontSize: '12px' }}>
-                              No wallet address configured
-                            </p>
-                          ) : isLoadingPortfolio ? (
-                            <div className="text-center">
-                              <div className="animate-spin inline-block">⏳</div>
-                              <p className="text-secondary" style={{ fontSize: '12px', marginTop: '4px' }}>
-                                Loading portfolio...
-                              </p>
-                            </div>
-                          ) : portfolio ? (
-                            <div>
-                              <div className="grid grid-3 gap-4 mb-3">
-                                <div>
-                                  <div className="text-secondary" style={{ fontSize: '11px' }}>Total Balance</div>
-                                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                    {mobulaApiService.formatBalance(portfolio.total_wallet_balance)}
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-secondary" style={{ fontSize: '11px' }}>24h PnL</div>
-                                  <div 
-                                    style={{ 
-                                      fontSize: '14px', 
-                                      fontWeight: '600',
-                                      color: portfolio.total_pnl_history['24h'] ? 
-                                        (portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized >= 0 ? '#00ff00' : '#ff4444') : 
-                                        'var(--text-secondary)'
-                                    }}
-                                  >
-                                    {portfolio.total_pnl_history['24h'] ? 
-                                      mobulaApiService.formatPnL(portfolio.total_pnl_history['24h'].realized + portfolio.total_pnl_history['24h'].unrealized).value :
-                                      'N/A'
-                                    }
-                                  </div>
-                                </div>
-                                <div>
-                                  <div className="text-secondary" style={{ fontSize: '11px' }}>Assets</div>
-                                  <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
-                                    {portfolio.assets?.length || 0}
-                                  </div>
-                                </div>
-                              </div>
-                              
-                              {/* Top Assets */}
-                              {portfolio.assets && portfolio.assets.length > 0 && (
-                                <div>
-                                  <div className="text-secondary" style={{ fontSize: '11px', marginBottom: '6px' }}>Top Holdings</div>
-                                  <div className="space-y-2">
-                                    {portfolio.assets.slice(0, 4).map((asset, index) => (
-                                      <div key={asset.asset.id || index} className="flex justify-between items-center">
-                                        <div className="flex items-center gap-2">
-                                          {asset.asset.logo && (
-                                            <img 
-                                              src={asset.asset.logo} 
-                                              alt={asset.asset.symbol}
-                                              style={{ width: '16px', height: '16px', borderRadius: '50%' }}
-                                              onError={(e) => { e.currentTarget.style.display = 'none'; }}
-                                            />
-                                          )}
-                                          <span style={{ fontSize: '12px' }}>{asset.asset.symbol}</span>
-                                          <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                                            ({(asset.allocation || 0).toFixed(1)}%)
-                                          </span>
-                                        </div>
-                                        <div style={{ fontSize: '12px', fontWeight: '500' }}>
-                                          {mobulaApiService.formatBalance(asset.estimated_balance)}
-                                        </div>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          ) : (
-                            <div>
-                              <p className="text-secondary" style={{ fontSize: '12px', marginBottom: '8px' }}>
-                                Portfolio data unavailable
-                              </p>
-                              <button 
-                                className="btn btn-ghost" 
-                                style={{ padding: '4px 8px', fontSize: '11px' }}
-                                onClick={() => fetchPortfolio(walletAddress)}
-                              >
-                                Load Portfolio
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    );
-                  })()}
 
                   {/* Agent Wallet Info */}
                   <div className="grid grid-2 gap-4">
