@@ -4,7 +4,7 @@ import QRCode from 'react-qr-code';
 import { usePrivy } from '@privy-io/react-auth';
 import { Wallet, Copy, RefreshCw, Zap, Save } from 'lucide-react';
 import { backendApiService } from '../../lib/backendApi';
-import { NETWORKS, getTokensForChain, POPULAR_NETWORKS } from '../../constants/chains';
+import { NETWORKS } from '../../constants/chains';
 
 interface WalletInfo {
   address: string;
